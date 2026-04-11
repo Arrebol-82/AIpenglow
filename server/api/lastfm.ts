@@ -28,8 +28,30 @@ type LastFmResponse = {
   }
 }
 
+type ResolvedTrackImages = {
+  small: string | null
+  medium: string | null
+  large: string | null
+  extralarge: string | null
+}
+
 const resolveTrackImage = (images: LastFmImage[] = []) =>
   [...images].reverse().find(image => image?.['#text'])?.['#text'] ?? null
+
+const resolveTrackImages = (images: LastFmImage[] = []): ResolvedTrackImages => {
+  const entries = new Map(
+    images
+      .filter(image => image?.size && image?.['#text'])
+      .map(image => [image.size as keyof ResolvedTrackImages, image['#text'] as string])
+  )
+
+  return {
+    small: entries.get('small') ?? null,
+    medium: entries.get('medium') ?? null,
+    large: entries.get('large') ?? null,
+    extralarge: entries.get('extralarge') ?? null
+  }
+}
 
 export default defineEventHandler(async () => {
   const config = useRuntimeConfig()
@@ -79,6 +101,7 @@ export default defineEventHandler(async () => {
         artist: rawTrack.artist?.['#text'] ?? '',
         album: rawTrack.album?.['#text'] ?? '',
         image: resolveTrackImage(rawTrack.image),
+        images: resolveTrackImages(rawTrack.image),
         url: rawTrack.url ?? null,
         isNowPlaying: rawTrack['@attr']?.nowplaying === 'true',
         listenedAt: rawTrack.date?.['#text'] ?? null

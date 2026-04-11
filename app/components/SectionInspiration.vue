@@ -4,6 +4,12 @@ type RecentTrack = {
   artist: string
   album: string
   image: string | null
+  images?: {
+    small: string | null
+    medium: string | null
+    large: string | null
+    extralarge: string | null
+  }
   url: string | null
   isNowPlaying: boolean
   listenedAt: string | null
@@ -34,9 +40,18 @@ const activeTrack = computed(() => recentTrack.value?.isNowPlaying ? recentTrack
 const canPoll = computed(() => isPageVisible.value && isSectionInView.value)
 const pollDelay = computed(() => activeTrack.value ? 15000 : 30000)
 const vinylTrackTitle = computed(() => activeTrack.value?.name || '')
+const albumArtUrl = computed(() =>
+  activeTrack.value?.images?.large
+  || activeTrack.value?.images?.medium
+  || activeTrack.value?.images?.extralarge
+  || activeTrack.value?.image
+  || null
+)
+const displayedAlbumArtUrl = ref<string | null>(null)
 
 let recentTrackRefreshTimer: ReturnType<typeof setTimeout> | null = null
 let sectionObserver: IntersectionObserver | null = null
+let albumArtRequestId = 0
 
 const clearRecentTrackRefreshTimer = () => {
   if (recentTrackRefreshTimer) {
@@ -72,6 +87,30 @@ const handleVisibilityChange = () => {
   isPageVisible.value = document.visibilityState === 'visible'
 }
 
+const preloadAlbumArt = async (url: string) => {
+  const image = new Image()
+  image.decoding = 'async'
+
+  await new Promise<void>((resolve, reject) => {
+    image.onload = () => resolve()
+    image.onerror = () => reject(new Error('Failed to load album art'))
+    image.src = url
+
+    if (image.complete) {
+      resolve()
+    }
+  })
+
+  if (typeof image.decode === 'function') {
+    try {
+      await image.decode()
+    }
+    catch {
+      // Fall back to the already loaded image when decode is unavailable.
+    }
+  }
+}
+
 watch(canPoll, (value) => {
   if (value) {
     void refreshRecentTrack()
@@ -85,6 +124,39 @@ watch(pollDelay, () => {
   if (canPoll.value) {
     scheduleNextRefresh()
   }
+})
+
+watch(albumArtUrl, async (nextUrl) => {
+  const requestId = ++albumArtRequestId
+
+  if (!nextUrl) {
+    displayedAlbumArtUrl.value = null
+    return
+  }
+
+  if (!import.meta.client) {
+    displayedAlbumArtUrl.value = nextUrl
+    return
+  }
+
+  if (displayedAlbumArtUrl.value === nextUrl) {
+    return
+  }
+
+  try {
+    await preloadAlbumArt(nextUrl)
+
+    if (requestId === albumArtRequestId) {
+      displayedAlbumArtUrl.value = nextUrl
+    }
+  }
+  catch {
+    if (requestId === albumArtRequestId) {
+      displayedAlbumArtUrl.value = nextUrl
+    }
+  }
+}, {
+  immediate: true
 })
 
 onMounted(() => {
@@ -155,6 +227,7 @@ const recentTrackStatus = computed(() => {
 
   return 'NO PLAYBACK'
 })
+
 </script>
 
 <template>
@@ -174,39 +247,79 @@ const recentTrackStatus = computed(() => {
           >
             <div class="inspiration-vinyl-sheen"></div>
             <div class="inspiration-vinyl-grooves"></div>
-            <div class="inspiration-vinyl-label">
+            <div
+              :class="[
+                'inspiration-vinyl-label',
+                { 'inspiration-vinyl-label--art': Boolean(displayedAlbumArtUrl) }
+              ]"
+            >
+              <img
+                v-if="displayedAlbumArtUrl"
+                :src="displayedAlbumArtUrl"
+                :alt="`${activeTrack?.album || activeTrack?.name || 'Album'} vinyl label art`"
+                class="inspiration-vinyl-label-art"
+              >
               <p
-                v-if="vinylTrackTitle"
+                v-else-if="vinylTrackTitle"
                 class="inspiration-vinyl-title"
               >
                 {{ vinylTrackTitle }}
               </p>
             </div>
-            <span class="inspiration-vinyl-spindle"></span>
+            <span
+              :class="[
+                'inspiration-vinyl-spindle',
+                { 'inspiration-vinyl-spindle--art': Boolean(displayedAlbumArtUrl) }
+              ]"
+            ></span>
           </div>
         </div>
       </div>
 
       <div class="space-y-4 lg:col-span-5 lg:-ml-[20px]">
-        <div class="surface-card surface-card--compact font-chinese">
-          <div class="mb-3 flex items-center gap-3 text-on-background/78">
-            <span class="material-symbols-outlined text-[20px] text-accent">music_note</span>
-            <span class="text-sm tracking-[0.18em] text-on-background/48">NOW PLAYING</span>
+        <div class="surface-card surface-card--compact inspiration-panel font-chinese">
+          <div class="flex items-start gap-4 md:gap-5">
+            <div class="min-w-0 flex-1">
+              <div class="mb-3 flex items-center gap-3 text-on-background/78">
+                <span class="material-symbols-outlined text-[20px] text-accent">music_note</span>
+                <span class="text-sm tracking-[0.18em] text-on-background/48">NOW PLAYING</span>
+              </div>
+              <h3 class="text-[1.55rem] leading-tight text-on-background">
+                {{ recentTrackTitle }}
+              </h3>
+              <p class="mt-3 text-base leading-8 text-on-background/64">
+                {{ recentTrackMeta }}
+              </p>
+              <div class="mt-5 border-t border-outline/30 pt-4">
+                <span class="text-xs uppercase tracking-[0.2em] text-on-background/42">
+                  {{ recentTrackStatus }}
+                </span>
+              </div>
+            </div>
+            <div
+              v-if="displayedAlbumArtUrl"
+              class="music-cover-frame hidden shrink-0 sm:block"
+            >
+              <img
+                :src="displayedAlbumArtUrl"
+                :alt="`${activeTrack?.album || activeTrack?.name || 'Album'} cover art`"
+                class="music-cover-image"
+              >
+            </div>
           </div>
-          <h3 class="text-[1.55rem] leading-tight text-on-background">
-            {{ recentTrackTitle }}
-          </h3>
-          <p class="mt-3 text-base leading-8 text-on-background/64">
-            {{ recentTrackMeta }}
-          </p>
-          <div class="mt-5 border-t border-outline/30 pt-4">
-            <span class="text-xs uppercase tracking-[0.2em] text-on-background/42">
-              {{ recentTrackStatus }}
-            </span>
+          <div
+            v-if="displayedAlbumArtUrl"
+            class="music-cover-frame music-cover-frame--mobile mt-4 sm:hidden"
+          >
+            <img
+              :src="displayedAlbumArtUrl"
+              :alt="`${activeTrack?.album || activeTrack?.name || 'Album'} cover art`"
+              class="music-cover-image"
+            >
           </div>
         </div>
 
-        <div class="surface-card surface-card--compact font-chinese">
+        <div class="surface-card surface-card--compact inspiration-panel font-chinese">
           <div class="mb-3 flex items-center gap-3 text-on-background/78">
             <span class="material-symbols-outlined text-[20px] text-accent">menu_book</span>
             <span class="text-sm tracking-[0.18em] text-on-background/48">CURRENTLY READING</span>
@@ -219,7 +332,7 @@ const recentTrackStatus = computed(() => {
           </p>
         </div>
 
-        <div class="surface-card surface-card--compact film-card font-chinese">
+        <div class="surface-card surface-card--compact inspiration-panel film-card font-chinese">
           <div class="mb-2 flex items-center gap-2.5 text-on-background/60">
             <span class="material-symbols-outlined text-[17px] text-on-background/38">theaters</span>
             <span class="text-[10px] tracking-[0.18em] text-on-background/34">RECENT FILM</span>
@@ -243,3 +356,62 @@ const recentTrackStatus = computed(() => {
     </div>
   </section>
 </template>
+
+<style scoped>
+.music-cover-frame {
+  width: 112px;
+  overflow: hidden;
+  border: 1px solid rgb(216 206 192 / 0.42);
+  border-radius: 18px;
+  background: rgb(255 255 255 / 0.3);
+  box-shadow: 0 14px 30px rgb(47 58 74 / 0.08);
+}
+
+.music-cover-frame--mobile {
+  width: 88px;
+}
+
+.music-cover-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
+.inspiration-vinyl-label-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  object-fit: cover;
+  transition: transform 260ms ease;
+}
+
+.inspiration-vinyl-label--art {
+  overflow: hidden;
+  background: #f4efe7;
+}
+
+.inspiration-vinyl-label--art::before,
+.inspiration-vinyl-label--art::after {
+  opacity: 0;
+}
+
+.inspiration-vinyl-label--art .inspiration-vinyl-label-art {
+  transform: scale(1.035);
+}
+
+.inspiration-vinyl-spindle--art {
+  width: 0.82rem;
+  box-shadow: 0 0 0 5px rgb(17 18 22 / 0.4);
+}
+
+.inspiration-panel {
+  transition: all 0.6s cubic-bezier(0.2, 1, 0.2, 1);
+}
+
+.inspiration-panel:hover {
+  transform: translateY(-5px);
+  filter: drop-shadow(0 24px 36px rgb(47 58 74 / 0.12));
+}
+</style>

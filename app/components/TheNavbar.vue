@@ -10,6 +10,7 @@ const navLinks = [
 
 const activeSection = ref('home')
 const hasScrolledPastHome = ref(false)
+const isNavbarVisible = ref(true)
 const hoveredSection = ref('')
 const indicatorStyle = ref({
   opacity: '0',
@@ -17,6 +18,8 @@ const indicatorStyle = ref({
   width: '0px'
 })
 const navLinkRefs = new Map<string, HTMLAnchorElement>()
+let lastScrollY = 0
+let viewportHideThreshold = 0
 
 const setNavLinkRef = (id: string, el: Element | ComponentPublicInstance | null) => {
   if (el instanceof HTMLAnchorElement) {
@@ -58,14 +61,33 @@ const updateHomeEdgeState = () => {
 }
 
 const syncActiveSection = () => {
+  const currentScrollY = window.scrollY
+  const scrollDelta = currentScrollY - lastScrollY
+
   updateHomeEdgeState()
 
-  if (window.scrollY < 120) {
+  if (viewportHideThreshold === 0) {
+    viewportHideThreshold = window.innerHeight
+  }
+
+  if (currentScrollY <= viewportHideThreshold) {
+    isNavbarVisible.value = true
+  }
+  else if (scrollDelta > 4) {
+    isNavbarVisible.value = false
+  }
+  else if (scrollDelta < -2) {
+    isNavbarVisible.value = true
+  }
+
+  lastScrollY = currentScrollY
+
+  if (currentScrollY < 120) {
     activeSection.value = 'home'
     return
   }
 
-  const scrollPosition = window.scrollY + 160
+  const scrollPosition = currentScrollY + 160
   let currentSection = 'home'
 
   for (const link of navLinks) {
@@ -96,11 +118,14 @@ const handleNavLeave = () => {
 }
 
 const handleResize = () => {
+  viewportHideThreshold = window.innerHeight
   syncActiveSection()
   updateIndicator()
 }
 
 onMounted(() => {
+  lastScrollY = window.scrollY
+  viewportHideThreshold = window.innerHeight
   syncActiveSection()
   nextTick(updateIndicator)
   window.addEventListener('scroll', syncActiveSection, { passive: true })
@@ -123,12 +148,17 @@ watch([activeSection, hoveredSection], async () => {
 <template>
   <header
     :class="[
-      'site-header fixed top-0 z-50 w-full bg-background/90 backdrop-blur-2xl',
-      { 'navbar-past-home': hasScrolledPastHome }
+      'site-header fixed top-0 z-50 w-full',
+      {
+        'navbar-past-home': hasScrolledPastHome,
+        'site-header--hidden': !isNavbarVisible
+      }
     ]"
   >
     <nav class="flex w-full items-center justify-between px-6 py-2.5 md:px-12 xl:px-[60px]">
-      <div class="font-headline text-[1.35rem] font-semibold tracking-[-0.04em] text-on-background">Alpenglow</div>
+      <div class="site-brand font-headline text-[1.35rem] font-semibold tracking-[-0.04em]">
+        Alpenglow
+      </div>
       <div class="nav-links hidden items-center gap-7 md:flex lg:gap-8" @mouseleave="handleNavLeave">
         <a
           v-for="link in navLinks"
@@ -158,8 +188,32 @@ watch([activeSection, hoveredSection], async () => {
 
 <style scoped>
 .site-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background-color: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   border-bottom: 1px solid transparent;
-  transition: box-shadow 280ms ease, border-color 280ms ease;
+  transform: translateY(0);
+  transition: transform 180ms ease-out, box-shadow 220ms ease, border-color 220ms ease;
+  overflow: hidden;
+}
+
+.site-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: rgb(var(--background-rgb, 246 241 233) / 1);
+  transform: scaleY(0);
+  transform-origin: bottom center;
+  transition: transform 220ms ease;
+  z-index: 0;
+}
+
+.site-header--hidden {
+  transform: translateY(calc(-100% - 12px));
 }
 
 .navbar-past-home {
@@ -167,8 +221,13 @@ watch([activeSection, hoveredSection], async () => {
   box-shadow: 0 12px 28px rgb(47 58 74 / 0.06);
 }
 
+.navbar-past-home::before {
+  transform: scaleY(1);
+}
+
 .nav-links {
   position: relative;
+  z-index: 1;
 }
 
 .nav-link {
@@ -176,8 +235,42 @@ watch([activeSection, hoveredSection], async () => {
   padding: 0 0.1rem 0.32rem;
 }
 
+.site-header:not(.navbar-past-home) .nav-link {
+  color: rgb(232 221 208 / 0.84);
+  text-shadow: 0 1px 10px rgb(21 30 40 / 0.18);
+}
+
+.site-header:not(.navbar-past-home) .nav-link:hover {
+  color: rgb(var(--soft-primary-rgb) / 0.96);
+}
+
+.site-header:not(.navbar-past-home) .nav-link--active {
+  color: rgb(var(--soft-primary-rgb) / 0.9);
+}
+
+.site-header:not(.navbar-past-home) .material-symbols-outlined {
+  color: rgb(248 246 241 / 0.92);
+  text-shadow: 0 1px 10px rgb(21 30 40 / 0.18);
+}
+
+nav {
+  position: relative;
+  z-index: 1;
+}
+
+.site-brand {
+  color: rgb(248 246 241 / 0.96);
+  text-shadow: 0 1px 10px rgb(21 30 40 / 0.18);
+  transition: color 220ms ease, text-shadow 220ms ease;
+}
+
+.navbar-past-home .site-brand {
+  color: rgb(var(--soft-primary-rgb) / 0.98);
+  text-shadow: none;
+}
+
 .nav-link--active {
-  color: var(--soft-primary);
+  color: rgb(var(--soft-primary-rgb) / 0.9);
   font-weight: 600;
 }
 
