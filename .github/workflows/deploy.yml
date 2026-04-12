@@ -15,17 +15,15 @@ jobs:
 
       - name: Deploy to Server
         uses: appleboy/ssh-action@master
-        with:
+        with:   # <--- 这是父级
           host: ${{ secrets.REMOTE_HOST }}
           username: ${{ secrets.REMOTE_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-        script: |
-            # --- 关键：手动加载 NVM 和环境变量 ---
+          # 关键点：script 必须缩进在 with 里面，不要和 with 对齐！
+          script: |
             export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # 加载 nvm
-            export PATH=$PATH:$(npm config get prefix)/bin # 确保能找到 pm2
-            
-            # --- 以下是你原来的业务逻辑 ---
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            export PATH=$PATH:$(npm config get prefix)/bin
             cd ~/code/AIpenglow
             git fetch --all
             git reset --hard origin/main
