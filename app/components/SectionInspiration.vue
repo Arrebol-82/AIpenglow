@@ -197,7 +197,7 @@ const recentTrackTitle = computed(() => {
     return '最近在听的声音'
   }
 
-  return '暂无播放'
+  return '现在没在听歌'
 })
 
 const recentTrackMeta = computed(() => {
@@ -206,11 +206,11 @@ const recentTrackMeta = computed(() => {
   }
 
   if (lastfmData.value?.reason === 'fetch_failed') {
-    return '暂时没有拉到最近播放，稍后再试。'
+    return '最近播放还没加载出来...'
   }
 
   if (activeTrack.value) {
-    return [activeTrack.value.artist, activeTrack.value.album].filter(Boolean).join(' · ')
+    return [activeTrack.value.artist, activeTrack.value.album].filter(Boolean).join(' 路 ')
   }
 
   return '现在没有正在播放的歌曲。'
@@ -227,7 +227,6 @@ const recentTrackStatus = computed(() => {
 
   return 'NO PLAYBACK'
 })
-
 </script>
 
 <template>
@@ -344,10 +343,10 @@ const recentTrackStatus = computed(() => {
             <p>片名：幽灵公主</p>
             <div class="flex flex-wrap gap-3 pt-1">
               <span class="rounded-full border border-outline/30 bg-background/58 px-3.5 py-1 text-[12px] leading-5 text-on-background/56">
-                感受一：生きて / ikiro
+                感受一：生きろ / ikiro
               </span>
               <span class="rounded-full border border-outline/30 bg-background/58 px-3.5 py-1 text-[12px] leading-5 text-on-background/56">
-                感受二：很震撼 , 忐忑
+                感受二：很震撼，很贴近
               </span>
             </div>
           </div>

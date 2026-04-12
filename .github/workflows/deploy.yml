@@ -3,11 +3,12 @@ name: Deploy Nuxt App
 on:
   push:
     branches:
-      - main  # 只有当推送到 main 分支时才触发自动化
+      - main  # 只有推送到 main 分支时才触发
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -19,11 +20,25 @@ jobs:
           username: ${{ secrets.REMOTE_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            # 1. 进入项目目录
             cd ~/code/AIpenglow
-            git pull origin main
-            # 加载环境变量（确保能找到 npm 和 pm2）
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            
+            # 2. 暴力同步：丢弃服务器上所有本地改动，强制对齐 GitHub
+            git fetch --all
+            git reset --hard origin/main
+            
+            # 3. 彻底清理：删掉旧的构建产物和缓存，防止“幽灵代码”
+            rm -rf .output
+            rm -rf .nuxt
+            
+            # 4. 安装依赖
             npm install
+            
+            # 5. 限制内存构建：戴上 1.5G 的“紧箍咒”，防止服务器炸机
             NODE_OPTIONS="--max-old-space-size=1536" npm run build
+            
+            # 6. 重启服务：如果进程存在就重启，不存在就新建
             pm2 restart AIpenglow-nuxt-app || pm2 start .output/server/index.mjs --name "AIpenglow-nuxt-app"
+            
+            # 7. 保存 PM2 状态，确保服务器重启后能自启动
+            pm2 save
