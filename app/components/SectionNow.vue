@@ -1,245 +1,878 @@
-<script setup lang="ts">
-type FutureEntry = {
-  title: string
-  content: string
-}
-
-type LogEntry = {
-  date: string
-  content: string
-}
-
-const futureEntries: FutureEntry[] = [
-  {
-    title: '\u628a\u4e2a\u4eba\u7f51\u7ad9\u7ee7\u7eed\u6253\u78e8\u5b8c\u6574',
-    content: '\u628a\u9875\u9762\u7ec6\u8282\u3001\u8282\u594f\u548c\u5185\u5bb9\u6162\u6162\u6536\u62fe\u5230\u66f4\u8212\u670d\u7684\u72b6\u6001\u3002'
-  },
-  {
-    title: '\u8865\u4e0a\u540e\u7aef\u57fa\u7840\u80fd\u529b',
-    content: '\u628a\u63a5\u53e3\u3001\u9274\u6743\u3001\u90e8\u7f72\u8fd9\u4e9b\u80fd\u529b\u4e00\u70b9\u70b9\u8865\u8d77\u6765\u3002'
-  },
-  {
-    title: '\u63d0\u9ad8\u82f1\u6587\u9605\u8bfb\u901f\u5ea6',
-    content: '\u80fd\u66f4\u987a\u624b\u5730\u770b\u6587\u6863\u3001\u770b\u535a\u5ba2\uff0c\u4e5f\u80fd\u5c11\u4e00\u70b9\u505c\u987f\u3002'
-  },
-  {
-    title: '\u505a\u7a33\u5b9a\u7684\u8f93\u51fa\u8bb0\u5f55',
-    content: '\u628a\u5b66\u5230\u7684\u4e1c\u897f\u548c\u6bcf\u5929\u7684\u8fdb\u5c55\u7559\u4e0b\u6765\uff0c\u4e0d\u518d\u53ea\u505c\u5728\u8111\u5b50\u91cc\u3002'
-  },
-  {
-    title: '\u4fdd\u6301\u8282\u594f\uff0c\u4e0d\u6025\u7740\u8bc1\u660e\u4ec0\u4e48',
-    content: '\u5148\u628a\u773c\u524d\u7684\u4e8b\u505a\u597d\uff0c\u518d\u6162\u6162\u628a\u8def\u8d70\u5bbd\u3002'
-  }
-]
-
-const logs: LogEntry[] = [
-  {
-    date: '04 / 02',
-    content: '\u5728\u6539\u4e2a\u4eba\u7f51\u7ad9\u7684\u6392\u7248\uff0c\u628a Inspiration \u548c Now \u8fd9\u4e24\u5757\u91cd\u65b0\u642d\u5f97\u66f4\u987a\u4e00\u70b9\u3002'
-  },
-  {
-    date: '04 / 01',
-    content: '\u770b\u4e86\u4e00\u4e9b Nuxt \u548c\u670d\u52a1\u7aef\u63a5\u53e3\u7684\u5199\u6cd5\uff0c\u4e5f\u987a\u624b\u63a5\u4e86 Last.fm \u7684\u6700\u8fd1\u64ad\u653e\u3002'
-  },
-  {
-    date: '03 / 31',
-    content: '\u628a\u6700\u8fd1\u60f3\u505a\u7684\u65b9\u5411\u91cd\u65b0\u6574\u7406\u4e86\u4e00\u904d\uff0c\u5c3d\u91cf\u53ea\u7559\u4e0b\u771f\u6b63\u4f1a\u53bb\u505a\u7684\u4e8b\u60c5\u3002'
-  },
-  {
-    date: '03 / 30',
-    content: '\u82b1\u65f6\u95f4\u770b\u4e86\u70b9\u540e\u7aef\u77e5\u8bc6\uff0c\u4e5f\u5728\u60f3\u600e\u4e48\u628a\u5b66\u4e60\u8fc7\u7a0b\u5199\u5f97\u66f4\u771f\u8bda\u4e00\u70b9\u3002'
-  },
-  {
-    date: '03 / 29',
-    content: '\u628a\u9875\u9762\u7ec6\u8282\u91cd\u65b0\u770b\u4e86\u4e00\u904d\uff0c\u60f3\u8ba9\u6bcf\u4e2a\u533a\u5757\u90fd\u66f4\u5b89\u9759\u4e00\u70b9\uff0c\u4e5f\u66f4\u50cf\u73b0\u5728\u771f\u6b63\u7684\u72b6\u6001\u3002'
-  },
-  {
-    date: '03 / 28',
-    content: '\u665a\u4e0a\u8bfb\u4e86\u4e00\u4e9b\u82f1\u6587\u6280\u672f\u6587\u7ae0\uff0c\u901f\u5ea6\u8fd8\u662f\u6162\uff0c\u4f46\u6bd4\u4e4b\u524d\u66f4\u613f\u610f\u6c89\u4e0b\u5fc3\u628a\u5b83\u4eec\u770b\u5b8c\u3002'
-  },
-  {
-    date: '03 / 27',
-    content: '\u6574\u7406\u4e86\u6700\u8fd1\u7684\u5b66\u4e60\u7b14\u8bb0\uff0c\u4e5f\u5728\u60f3\u600e\u4e48\u628a\u8fd9\u4e9b\u8fc7\u7a0b\u5199\u6210\u4ee5\u540e\u80fd\u56de\u770b\u7684\u8bb0\u5f55\u3002'
-  },
-  {
-    date: '03 / 26',
-    content: '\u770b\u4e86\u4e00\u4e9b\u540e\u7aef\u63a5\u53e3\u548c\u6570\u636e\u5904\u7406\u7684\u5185\u5bb9\uff0c\u60f3\u6162\u6162\u628a\u524d\u7aef\u4e4b\u5916\u7684\u80fd\u529b\u4e5f\u8865\u5f97\u66f4\u5b8c\u6574\u3002'
-  }
-]
-
-const displayLogs = computed(() => logs)
-const archiveEntryLabel = '[ \u6240\u6709\u8fc7\u5f80\uff0c\u7686\u4e3a\u5e8f\u7ae0 / VIEW ALL ARCHIVE ]'
-</script>
-
 <template>
   <section
     id="now"
-    class="section-divider scroll-mt-32"
+    class="relative min-h-screen overflow-hidden bg-[#F6F1E7] font-sans text-[#1D1E18]"
   >
-    <div class="section-now-curation min-h-[600px]">
-      <div class="grid min-h-[600px] grid-cols-1 gap-y-12 lg:grid-cols-[minmax(0,0.94fr)_0.5px_minmax(0,1.06fr)] lg:items-start lg:gap-x-10">
-        <div class="section-now-future flex flex-col p-7 font-chinese lg:sticky lg:top-32">
-          <div class="mb-5">
-            <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary/80">
-              {{ '\u672a\u6765' }}
-            </p>
+    <div
+      class="future-watermark absolute -bottom-[3.125rem] -left-6 z-0 select-none pointer-events-none leading-none text-[calc(min(30vw,30vh)+6.875rem)] md:left-0"
+    >
+      未来
+    </div>
+
+    <div class="relative z-10 mx-auto grid grid-cols-1 gap-8 lg:grid-cols-12">
+      <div
+        class="flex flex-col gap-6 pt-10 lg:col-span-4 lg:min-h-screen lg:justify-end lg:pb-[15vh]"
+      >
+        <div
+          v-for="(entry, index) in futureEntries"
+          :key="index"
+          class="future-entry relative pb-3"
+          :style="{
+            '--future-solid-width': `${futureLineWidths[index % futureLineWidths.length]}%`,
+          }"
+        >
+          <div
+            class="mb-1 font-mono text-xs font-bold tracking-widest text-[#1D1E18]/80 md:text-sm"
+          >
+            [IDX-0{{ index + 1 }}]
+          </div>
+          <h4
+            class="mb-1.5 text-[16px] font-bold tracking-wide text-[#111] md:text-[18px]"
+          >
+            {{ entry.title }}
+          </h4>
+          <p
+            class="text-[13px] font-medium leading-relaxed text-[#1D1E18]/70 md:text-sm"
+          >
+            {{ entry.content }}
+          </p>
+        </div>
+      </div>
+
+      <div
+        class="relative hidden min-h-[700px] justify-center overflow-hidden lg:col-span-2 lg:flex lg:min-h-screen"
+      >
+        <div
+          class="relative ml-12 translate-x-[calc(2.5rem+35px)] h-full min-h-full w-[20px]"
+        >
+          <div class="absolute right-[calc(100%+0.375rem)] top-32">
+            <div
+              class="vertical-text whitespace-nowrap font-mono text-[12px] uppercase tracking-[0.2em] text-[#1D1E18]/50"
+            >
+              <span class="translate-y-[5rem]">聪明一点点</span>
+              <span>争取比昨天的自己</span>
+            </div>
+            <span
+              aria-hidden="true"
+              class="absolute bottom-0 left-0 text-[1rem] leading-none text-[#1D1E18]/50 [transform:translateX(-0.875rem)_translateY(6rem)_scaleY(-1)]"
+            >
+              「
+            </span>
           </div>
 
-          <div class="section-now-future-list flex flex-1 flex-col">
+          <div
+            ref="scaleViewportRef"
+            class="scale-bar-stack h-full min-h-full w-[20px]"
+            aria-hidden="true"
+            @pointerdown="handleScalePointerDown"
+            @wheel.prevent="handleTimelineWheel"
+          >
+            <div ref="scaleTrackRef" class="scale-bar-track">
+              <div ref="scaleCycleRef" class="scale-bar-cycle">
+                <span
+                  v-for="tick in scaleTicks"
+                  :key="`scale-a-${tick.index}`"
+                  class="scale-tick"
+                  :class="[
+                    tick.kind === 'major' && 'scale-tick--major',
+                    tick.kind === 'middle' && 'scale-tick--middle',
+                  ]"
+                ></span>
+              </div>
+              <div class="scale-bar-cycle" aria-hidden="true">
+                <span
+                  v-for="tick in scaleTicks"
+                  :key="`scale-b-${tick.index}`"
+                  class="scale-tick"
+                  :class="[
+                    tick.kind === 'major' && 'scale-tick--major',
+                    tick.kind === 'middle' && 'scale-tick--middle',
+                  ]"
+                ></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-col pt-8 lg:col-span-6 lg:pt-16 lg:pl-6">
+        <div class="stacked-board relative w-full">
+          <div class="now-log-stack relative z-10">
+            <div class="now-log-card now-log-card--1"></div>
+            <div class="now-log-card now-log-card--2"></div>
+            <div class="now-log-card now-log-card--3"></div>
             <div
-              v-for="entry in futureEntries"
-              :key="entry.title"
-              class="section-now-future-item flex h-full flex-col justify-center"
+              class="now-log-card now-log-card--4"
+              @pointerdown="handleScalePointerDown"
+              @wheel.prevent="handleTimelineWheel"
             >
-              <p class="text-sm font-semibold text-on-background">
-                {{ entry.title }}
-              </p>
-              <p class="mt-1 text-sm leading-6 text-on-background/68">
-                {{ entry.content }}
-              </p>
+              <div ref="logViewportRef" class="now-log-viewport">
+                <div ref="logSheetRef" class="now-log-sheet">
+                  <article
+                    v-for="(log, index) in logs"
+                    :key="`${log.date}-${index}`"
+                    class="now-log-entry"
+                  >
+                    <p class="now-log-entry__date">{{ log.date }}</p>
+                    <p class="now-log-entry__content">{{ log.content }}</p>
+                  </article>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <div aria-hidden="true" class="section-now-divider hidden bg-primary/10 lg:block"></div>
-
-        <div class="section-now-log flex flex-col p-7 font-chinese">
-          <div class="mb-5">
-            <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-accent/80">
-              {{ '\u65e5\u5fd7' }}
-            </p>
-          </div>
-
-          <div class="section-now-log-panel flex flex-1 flex-col">
-            <div class="section-now-log-stream">
-              <div
-                v-for="log in displayLogs"
-                :key="`${log.date}-${log.content}`"
-                class="section-now-log-entry"
-              >
-                <p class="text-xs uppercase tracking-[0.2em] text-on-background/45">
-                  {{ log.date }}
-                </p>
-                <p class="mt-2 text-sm leading-7 text-on-background/78">
-                  {{ log.content }}
-                </p>
-              </div>
-            </div>
-
-            <button type="button" class="section-now-archive-link">
-              <span aria-hidden="true" class="section-now-archive-glyph">↘</span>
-              <span class="section-now-archive-copy">{{ archiveEntryLabel }}</span>
-            </button>
-          </div>
+        <div class="relative z-20 mt-8 -translate-y-[20px] flex justify-end">
+          <button
+            class="group flex cursor-pointer items-center border-[2.5px] border-[#1D1E18] bg-[#F6F1E7] shadow-sm transition-colors duration-200 hover:bg-[#1D1E18] hover:text-[#F6F1E7]"
+          >
+            <span
+              class="border-r-[2.5px] border-[#1D1E18] px-[0.5625rem] py-[0.6875rem] font-mono text-[1.125rem] font-bold leading-none group-hover:border-[#F6F1E7]"
+              >↗</span
+            >
+            <span
+              class="px-[0.875rem] py-[0.6875rem] font-mono text-xs font-bold uppercase tracking-widest md:text-sm"
+            >
+              View All Archive
+            </span>
+          </button>
         </div>
       </div>
     </div>
   </section>
 </template>
 
+<script setup lang="ts">
+import { nextTick, onMounted, onUnmounted, ref } from "vue";
+import { gsap } from "gsap";
+
+type FutureEntry = {
+  title: string;
+  content: string;
+};
+
+type LogEntry = {
+  date: string;
+  content: string;
+};
+
+const futureEntries: FutureEntry[] = [
+  {
+    title: "把个人网站继续打磨完整",
+    content: "把页面细节、节奏和内容慢慢收拢到更舒服的状态。",
+  },
+  {
+    title: "补上后端基础能力",
+    content: "把接口、鉴权、部署这些能力一点点补起来。",
+  },
+  {
+    title: "提高英文阅读速度",
+    content: "能更顺手地看文档、看博客，也能少一点停顿。",
+  },
+  {
+    title: "做稳定的输出记录",
+    content: "把学到的东西和每天的进展留下来，不再只停在脑子里。",
+  },
+  {
+    title: "保持节奏，不急着证明什么",
+    content: "先把眼前的事做好，再慢慢把路走宽。",
+  },
+];
+
+const futureLineWidths = [60, 30];
+
+const logs: LogEntry[] = [
+  {
+    date: "04 / 02",
+    content:
+      "在改个人网站的排版，把 Inspiration 和 Now 这两块重新搭得更顺一点。",
+  },
+  {
+    date: "04 / 01",
+    content:
+      "看了一些 Nuxt 和服务端接口的写法，也顺手接了 Last.fm 的最近播放。",
+  },
+  {
+    date: "03 / 31",
+    content: "把最近想做的方向重新整理了一遍，尽量只留下真正会去做的事情。",
+  },
+  {
+    date: "03 / 30",
+    content: "花时间看了点后端知识，也在想怎么把学习过程写得更真诚一点。",
+  },
+  {
+    date: "03 / 29",
+    content:
+      "把页面细节重新看了一遍，想让每个区块都更安静一点，也更像现在真正的状态。",
+  },
+  {
+    date: "03 / 28",
+    content:
+      "晚上读了一些英文技术文章，速度还是慢，但比之前更愿意沉下心把它们看完。",
+  },
+  {
+    date: "03 / 27",
+    content: "把一些页面动效重新拆开想了一遍，先保证结构清楚，再慢慢补细节。",
+  },
+  {
+    date: "03 / 26",
+    content:
+      "整理了最近写过的组件，发现很多问题不是技术难，而是节奏没有提前想好。",
+  },
+  {
+    date: "03 / 25",
+    content: "试着把每天做过的事情记下来，哪怕只是一点点，也比完全忘掉要好。",
+  },
+  {
+    date: "03 / 24",
+    content:
+      "继续调整个人网站的视觉关系，让内容、留白和交互都更接近自己想要的状态。",
+  },
+  {
+    date: "03 / 23",
+    content: "看了一些前端动画案例，重点不是炫，而是让页面的移动逻辑更自然。",
+  },
+  {
+    date: "03 / 22",
+    content: "把项目目录重新过了一遍，准备把后面要补的模块按优先级排出来。",
+  },
+];
+
+const scaleTicksPerLog = 16;
+const scaleExtraLogSlots = 8;
+const scaleTickCount = (logs.length + scaleExtraLogSlots) * scaleTicksPerLog;
+
+const scaleTicks = Array.from({ length: scaleTickCount }, (_, index) => ({
+  index,
+  kind: index % 8 === 0 ? "major" : index % 4 === 0 ? "middle" : "minor",
+}));
+
+const scaleViewportRef = ref<HTMLElement | null>(null);
+const scaleTrackRef = ref<HTMLElement | null>(null);
+const scaleCycleRef = ref<HTMLElement | null>(null);
+const logViewportRef = ref<HTMLElement | null>(null);
+const logSheetRef = ref<HTMLElement | null>(null);
+const timelineOffsetY = ref(0);
+const scaleOffsetY = ref(0);
+const scalePhaseOffsetY = ref(0);
+const scaleCycleHeight = ref(0);
+const timelineMinOffsetY = ref(0);
+const timelineMaxOffsetY = ref(0);
+const isScaleDragging = ref(false);
+let scaleDragStartY = 0;
+let timelineDragStartOffset = 0;
+let scaleResizeObserver: ResizeObserver | null = null;
+let timelineResizeObserver: ResizeObserver | null = null;
+let logSheetQuickY: gsap.QuickToFunc | null = null;
+let scaleTrackQuickY: gsap.QuickToFunc | null = null;
+let updateLogEntryReveal: (() => void) | null = null;
+
+const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
+
+const createLogEntryRevealUpdater = () => {
+  return () => {
+    if (!logViewportRef.value || !logSheetRef.value) {
+      return;
+    }
+
+    const viewportRect = logViewportRef.value.getBoundingClientRect();
+    const entries =
+      logSheetRef.value.querySelectorAll<HTMLElement>(".now-log-entry");
+    const fadeDistance = 92;
+    const lastIndex = entries.length - 1;
+
+    const distFromTopBoundary = timelineMaxOffsetY.value - timelineOffsetY.value;
+    const distFromBottomBoundary = timelineOffsetY.value - timelineMinOffsetY.value;
+
+    entries.forEach((entry, index) => {
+      const entryRect = entry.getBoundingClientRect();
+      const entryCenterY = entryRect.top + entryRect.height / 2;
+      const distanceToVisibleArea = Math.min(
+        entryCenterY - viewportRect.top,
+        viewportRect.bottom - entryCenterY,
+      );
+
+      const naturalReveal = clamp01(distanceToVisibleArea / fadeDistance);
+      const topBoundaryReveal = index === 0
+        ? clamp01(1 - distFromTopBoundary / fadeDistance)
+        : 0;
+      const bottomBoundaryReveal = index === lastIndex
+        ? clamp01(1 - distFromBottomBoundary / fadeDistance)
+        : 0;
+      const revealProgress = Math.max(naturalReveal, topBoundaryReveal, bottomBoundaryReveal);
+
+      gsap.set(entry, {
+        autoAlpha: revealProgress,
+        scale: 0.965 + revealProgress * 0.035,
+        overwrite: "auto",
+      });
+    });
+  };
+};
+
+const renderTimeline = (immediate = false) => {
+  if (immediate) {
+    if (logSheetRef.value) {
+      gsap.set(logSheetRef.value, { y: timelineOffsetY.value });
+    }
+
+    if (scaleTrackRef.value) {
+      gsap.set(scaleTrackRef.value, { y: scaleOffsetY.value });
+    }
+
+    return;
+  }
+
+  logSheetQuickY?.(timelineOffsetY.value);
+  scaleTrackQuickY?.(scaleOffsetY.value);
+};
+
+const normalizeScaleOffset = (value: number, previous = scaleOffsetY.value) => {
+  const cycleHeight = scaleCycleHeight.value;
+
+  if (!cycleHeight) {
+    return value;
+  }
+
+  let normalized = value;
+
+  while (normalized - previous > cycleHeight / 2) {
+    normalized -= cycleHeight;
+  }
+
+  while (normalized - previous < -cycleHeight / 2) {
+    normalized += cycleHeight;
+  }
+
+  return normalized;
+};
+
+const clampTimelineOffset = (value: number) => {
+  return Math.min(
+    timelineMaxOffsetY.value,
+    Math.max(timelineMinOffsetY.value, value),
+  );
+};
+
+const syncScaleOffset = () => {
+  const prev = scaleOffsetY.value;
+  scaleOffsetY.value = normalizeScaleOffset(
+    timelineOffsetY.value + scalePhaseOffsetY.value,
+    prev,
+  );
+  const wrapped =
+    scaleCycleHeight.value > 0 &&
+    Math.abs(scaleOffsetY.value - prev) > scaleCycleHeight.value / 2;
+
+  logSheetQuickY?.(timelineOffsetY.value);
+  if (wrapped) {
+    if (scaleTrackRef.value) {
+      gsap.killTweensOf(scaleTrackRef.value);
+      gsap.set(scaleTrackRef.value, { y: scaleOffsetY.value });
+      scaleTrackQuickY = gsap.quickTo(scaleTrackRef.value, "y", {
+        duration: 0.42,
+        ease: "power4.out",
+      });
+    }
+  } else {
+    scaleTrackQuickY?.(scaleOffsetY.value);
+  }
+  updateLogEntryReveal?.();
+};
+
+const calibrateScalePhase = () => {
+  renderTimeline(true);
+  const firstLogEntry =
+    logSheetRef.value?.querySelector<HTMLElement>(".now-log-entry");
+  const majorTicks = scaleViewportRef.value
+    ? Array.from(
+        scaleViewportRef.value.querySelectorAll<HTMLElement>(
+          ".scale-tick--major",
+        ),
+      )
+    : [];
+
+  if (!firstLogEntry || !majorTicks.length) {
+    return;
+  }
+
+  const logRect = firstLogEntry.getBoundingClientRect();
+  const logCenterY = logRect.top + logRect.height / 2;
+  const closestMajorTick = majorTicks.reduce((closest, tick) => {
+    const closestRect = closest.getBoundingClientRect();
+    const tickRect = tick.getBoundingClientRect();
+    const closestDistance = Math.abs(
+      logCenterY - (closestRect.top + closestRect.height / 2),
+    );
+    const tickDistance = Math.abs(
+      logCenterY - (tickRect.top + tickRect.height / 2),
+    );
+
+    return tickDistance < closestDistance ? tick : closest;
+  });
+  const tickRect = closestMajorTick.getBoundingClientRect();
+  const tickCenterY = tickRect.top + tickRect.height / 2;
+
+  scalePhaseOffsetY.value += logCenterY - tickCenterY;
+  syncScaleOffset();
+  renderTimeline(true);
+};
+
+const measureScaleCycle = () => {
+  if (!scaleCycleRef.value) {
+    return;
+  }
+
+  scaleCycleHeight.value = scaleCycleRef.value.offsetHeight;
+  syncScaleOffset();
+};
+
+const measureTimelineBounds = () => {
+  if (!logViewportRef.value || !logSheetRef.value) {
+    return;
+  }
+
+  const overflowY = Math.max(
+    0,
+    logSheetRef.value.scrollHeight - logViewportRef.value.clientHeight,
+  );
+  timelineMinOffsetY.value = -overflowY;
+  timelineMaxOffsetY.value = 0;
+  timelineOffsetY.value = clampTimelineOffset(timelineOffsetY.value);
+  syncScaleOffset();
+  renderTimeline(true);
+};
+
+const handleScalePointerMove = (event: PointerEvent) => {
+  if (!isScaleDragging.value) {
+    return;
+  }
+
+  timelineOffsetY.value = clampTimelineOffset(
+    timelineDragStartOffset + event.clientY - scaleDragStartY,
+  );
+  syncScaleOffset();
+};
+
+const handleTimelineWheel = (event: WheelEvent) => {
+  timelineOffsetY.value = clampTimelineOffset(
+    timelineOffsetY.value - event.deltaY,
+  );
+  syncScaleOffset();
+};
+
+const handleScalePointerUp = () => {
+  isScaleDragging.value = false;
+};
+
+const handleScalePointerDown = (event: PointerEvent) => {
+  isScaleDragging.value = true;
+  scaleDragStartY = event.clientY;
+  timelineDragStartOffset = timelineOffsetY.value;
+  (event.currentTarget as HTMLElement | null)?.setPointerCapture(
+    event.pointerId,
+  );
+};
+
+onMounted(async () => {
+  await nextTick();
+  if (logSheetRef.value) {
+    logSheetQuickY = gsap.quickTo(logSheetRef.value, "y", {
+      duration: 0.42,
+      ease: "power4.out",
+    });
+  }
+
+  if (scaleTrackRef.value) {
+    scaleTrackQuickY = gsap.quickTo(scaleTrackRef.value, "y", {
+      duration: 0.42,
+      ease: "power4.out",
+    });
+  }
+
+  updateLogEntryReveal = createLogEntryRevealUpdater();
+  gsap.ticker.add(updateLogEntryReveal);
+  renderTimeline(true);
+  updateLogEntryReveal();
+  measureScaleCycle();
+  measureTimelineBounds();
+  calibrateScalePhase();
+
+  if (scaleCycleRef.value) {
+    scaleResizeObserver = new ResizeObserver(() => {
+      measureScaleCycle();
+      calibrateScalePhase();
+    });
+    scaleResizeObserver.observe(scaleCycleRef.value);
+  }
+
+  if (logViewportRef.value && logSheetRef.value) {
+    timelineResizeObserver = new ResizeObserver(() => {
+      measureTimelineBounds();
+      calibrateScalePhase();
+    });
+    timelineResizeObserver.observe(logViewportRef.value);
+    timelineResizeObserver.observe(logSheetRef.value);
+  }
+
+  window.addEventListener("pointermove", handleScalePointerMove);
+  window.addEventListener("pointerup", handleScalePointerUp);
+  window.addEventListener("pointercancel", handleScalePointerUp);
+});
+
+onUnmounted(() => {
+  scaleResizeObserver?.disconnect();
+  timelineResizeObserver?.disconnect();
+  if (updateLogEntryReveal) {
+    gsap.ticker.remove(updateLogEntryReveal);
+  }
+  gsap.killTweensOf([logSheetRef.value, scaleTrackRef.value]);
+  window.removeEventListener("pointermove", handleScalePointerMove);
+  window.removeEventListener("pointerup", handleScalePointerUp);
+  window.removeEventListener("pointercancel", handleScalePointerUp);
+});
+</script>
+
 <style scoped>
-.section-now-future,
-.section-now-log {
-  transition: opacity 0.55s cubic-bezier(0.2, 1, 0.2, 1);
+.vertical-text {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
 }
 
-.section-now-divider {
-  width: 0.5px;
-  justify-self: center;
-  align-self: stretch;
+.vertical-text span {
+  display: block;
 }
 
-.section-now-future-item {
-  margin-bottom: 1.45rem;
+.scale-bar-stack {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 24px;
+  transform: translateX(-50%);
+  cursor: grab;
+  overflow-x: visible;
+  overflow-y: hidden;
+  touch-action: none;
+  user-select: none;
 }
 
-.section-now-future-item:last-child,
-.section-now-log-entry:last-child {
-  margin-bottom: 0;
+.scale-bar-stack:active {
+  cursor: grabbing;
 }
 
-.section-now-future-item > p:first-child {
-  font-family: 'LXGW WenKai', serif;
+.scale-bar-track {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  will-change: transform;
 }
 
-.section-now-future-item > p:last-child {
-  opacity: 0.6;
+.scale-bar-cycle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4.625px;
+  padding-block: 3px;
 }
 
-.section-now-log-entry {
-  margin-bottom: 1.7rem;
+.scale-tick {
+  display: block;
+  width: 10px;
+  height: 2px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background-color: rgba(29, 30, 24, 0.54);
 }
 
-.section-now-log-entry > p:first-child {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-  letter-spacing: 0.28em;
+.scale-tick--middle {
+  width: 14px;
+  background-color: rgba(29, 30, 24, 0.64);
 }
 
-.section-now-log-entry > p:last-child {
-  text-align: justify;
-  text-justify: inter-ideograph;
+.scale-tick--major {
+  width: 20px;
+  height: 2px;
+  background-color: rgba(29, 30, 24, 0.86);
 }
 
-.section-now-log-stream {
-  height: 500px;
-  overflow-y: auto;
-  padding-bottom: 0.8rem;
-  mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 100px), transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 100px), transparent 100%);
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+.future-watermark {
+  font-family: "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;
+  font-weight: 700;
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgba(29, 30, 24, 0.1);
 }
 
-.section-now-log-stream::-webkit-scrollbar {
-  display: none;
+.now-log-stack {
+  min-height: 51.625rem;
 }
 
-.section-now-archive-link {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 1rem;
-  align-items: start;
-  margin-top: 1rem;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: rgb(47 58 74 / 0.72);
-  text-align: left;
-  transition:
-    transform 0.35s cubic-bezier(0.2, 1, 0.2, 1),
-    opacity 0.35s cubic-bezier(0.2, 1, 0.2, 1);
+.now-log-card {
+  position: absolute;
+  width: 33.75rem;
+  height: 42.5rem;
+  border: 1.5px solid rgba(29, 30, 24, 0.68);
+  background: linear-gradient(
+    180deg,
+    rgba(238, 229, 217, 0.62),
+    rgba(219, 208, 194, 0.5)
+  );
+  box-shadow:
+    0 18px 30px rgba(29, 30, 24, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  -webkit-backdrop-filter: blur(18px) saturate(125%);
+  backdrop-filter: blur(18px) saturate(125%);
+  opacity: var(--now-card-opacity, 1);
 }
 
-.section-now-archive-link:hover {
-  transform: translate3d(4px, -2px, 0);
-  opacity: 1;
+.now-log-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(29, 30, 24, 0.14);
+  transform: translate(7px, 7px);
+  z-index: -1;
 }
 
-.section-now-archive-glyph {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-  font-size: 0.95rem;
+.now-log-card--1 {
+  top: 3.125rem;
+  right: 0;
+  z-index: 1;
+  --now-card-opacity: 1;
+}
+
+.now-log-card--1::before {
+  transform: translate(4px, 4px);
+}
+
+.now-log-card--2 {
+  top: 4.3125rem;
+  right: 0.6875rem;
+  z-index: 2;
+  border-color: rgba(29, 30, 24, 0.1);
+  --now-card-opacity: 0.72;
+}
+
+.now-log-card--2::before {
+  border-color: rgba(29, 30, 24, 0.06);
+}
+
+.now-log-card--3 {
+  top: 5.5rem;
+  right: 1.375rem;
+  z-index: 3;
+  --now-card-opacity: 0.56;
+}
+
+.now-log-card--4 {
+  top: 6.6875rem;
+  right: 2.0625rem;
+  z-index: 4;
+  --now-card-opacity: 1;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.now-log-card--4:active {
+  cursor: grabbing;
+}
+
+.now-log-viewport {
+  --now-log-mask-bleed-left: 0px;
+  --now-log-mask-bleed-right: 0px;
+  position: absolute;
+  top: 0;
+  right: calc(var(--now-log-mask-bleed-right) * -1);
+  bottom: 0;
+  left: calc(var(--now-log-mask-bleed-left) * -1);
+  overflow: hidden;
+}
+
+.now-log-sheet {
+  display: flex;
+  width: calc(
+    100% - var(--now-log-mask-bleed-left) - var(--now-log-mask-bleed-right)
+  );
+  min-height: 100%;
+  margin-left: var(--now-log-mask-bleed-left);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  padding: 1.6rem 1.5rem;
+  will-change: transform;
+}
+
+.now-log-entry {
+  position: relative;
+  display: flex;
+  width: calc(100% + 5rem);
+  height: 80px;
+  flex: 0 0 80px;
+  flex-direction: column;
+  justify-content: center;
+  align-self: center;
+  gap: 0.32rem;
+  border: 2.5px solid rgba(29, 30, 24, 0.82);
+  background: linear-gradient(
+    180deg,
+    rgba(244, 239, 231, 0.92),
+    rgba(236, 230, 220, 0.9)
+  );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.38);
+  padding: 0 0.85rem;
+  transform-origin: center;
+  will-change: opacity, transform;
+}
+
+.now-log-entry::before,
+.now-log-entry::after {
+  content: none;
+}
+
+.now-log-entry__date {
+  font-family: "IBM Plex Mono", "SFMono-Regular", "Consolas", monospace;
+  font-size: 1.3125rem;
+  font-weight: 700;
   line-height: 1;
-  color: rgb(47 58 74 / 0.48);
+  letter-spacing: 0.08em;
+  color: rgba(17, 17, 17, 0.92);
 }
 
-.section-now-archive-copy {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-  font-size: 0.76rem;
-  letter-spacing: 0.16em;
-  line-height: 1.8;
+.now-log-entry__content {
+  font-size: 1.0325rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: rgba(17, 17, 17, 0.9);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.section-now-curation:has(.section-now-future:hover) .section-now-log {
-  opacity: 0.2;
+@media (max-width: 1023px) {
+  .now-log-stack {
+    min-height: 34.5rem;
+  }
+
+  .now-log-card {
+    width: min(100%, 16.25rem);
+    height: 30.25rem;
+  }
+
+  .now-log-card--1 {
+    right: 0;
+  }
+
+  .now-log-card--2 {
+    top: 0.9rem;
+    right: 0.5rem;
+  }
+
+  .now-log-card--3 {
+    top: 1.8rem;
+    right: 1rem;
+  }
+
+  .now-log-card--4 {
+    top: 2.7rem;
+    right: 1.5rem;
+  }
+
+  .now-log-sheet {
+    gap: 0.65rem;
+    padding: 1rem 0.9rem;
+  }
+
+  .now-log-entry {
+    height: 2.8rem;
+    flex-basis: 2.8rem;
+    gap: 0.22rem;
+    padding: 0 0.55rem;
+  }
+
+  .now-log-entry__date {
+    font-size: 1.2125rem;
+  }
+
+  .now-log-entry__content {
+    font-size: 0.9625rem;
+    line-height: 1.15;
+  }
 }
 
 @media (min-width: 1024px) {
-  .section-now-future {
-    transform: translateY(-30px);
+  .now-log-viewport {
+    --now-log-mask-bleed-left: 15.75rem;
+    --now-log-mask-bleed-right: 3rem;
   }
 
-  .section-now-log {
-    transform: translateY(30px);
+  .now-log-entry {
+    --now-connector-gap: 0.55rem;
+    --now-connector-width: 12rem;
+    --now-connector-dot: 0.68rem;
   }
+
+  .now-log-entry::before,
+  .now-log-entry::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    pointer-events: none;
+  }
+
+  .now-log-entry::before {
+    left: calc((var(--now-connector-width) + var(--now-connector-gap)) * -1);
+    width: var(--now-connector-width);
+    height: 0.55rem;
+    transform: translateY(-50%);
+    background-image: radial-gradient(
+      circle,
+      rgba(29, 30, 24, 0.52) 1.35px,
+      transparent 1.55px
+    );
+    background-position: calc(var(--now-connector-dot) + 0.35rem) center;
+    background-size: 0.55rem 0.55rem;
+    background-repeat: repeat-x;
+  }
+
+  .now-log-entry::after {
+    left: calc((var(--now-connector-width) + var(--now-connector-gap)) * -1);
+    width: var(--now-connector-dot);
+    height: var(--now-connector-dot);
+    border-radius: 999px;
+    background-color: rgba(17, 17, 17, 0.95);
+    box-shadow: 0 0 0 2px rgba(246, 241, 231, 0.72);
+    transform: translateY(-50%);
+  }
+}
+
+.future-entry::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 78%;
+  border-bottom: 2.5px dotted rgba(29, 30, 24, 0.4);
+}
+
+.future-entry::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: var(--future-solid-width);
+  border-bottom: 2.5px solid rgba(29, 30, 24, 0.78);
+  z-index: 1;
+}
+
+.stacked-board {
+  position: relative;
+  background-color: transparent;
+}
+
+.stacked-board::before,
+.stacked-board::after {
+  content: none;
 }
 </style>

@@ -1,1004 +1,807 @@
-<script setup lang="ts">
-import { gsap } from 'gsap'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-
-const projectRows = [
-  [
-    { title: '模仿页面', meta: 'Notion / Frontend Study', accent: 'blue' },
-    { title: '界面实验', meta: 'UI Motion / Visual Draft', accent: 'sand' },
-  ],
-  [
-    { title: '落地页设计', meta: 'Editorial / Web Layout', accent: 'green' },
-    { title: '组件系统', meta: 'Design Tokens / Vue', accent: 'slate' },
-    { title: '动效片段', meta: 'Micro Motion / Case Notes', accent: 'blue' },
-  ],
-  [
-    { title: '卡片研究', meta: 'Display Panel / Archive', accent: 'sand' },
-    { title: '排版练习', meta: 'Type / Grid / Rhythm', accent: 'slate' },
-  ],
-  [
-    { title: '视觉采样', meta: 'Color / Texture / Mood', accent: 'green' },
-    { title: '网页复刻', meta: 'Frontend / Study Clone', accent: 'blue' },
-    { title: '交互草图', meta: 'Hover / Flow / Motion', accent: 'sand' },
-  ]
-] as const
-
-type CanvasProject = (typeof projectRows)[number][number]
-
-const canvasProjectPool = computed<CanvasProject[]>(() => [...projectRows.flat(), ...projectRows[0]])
-const shuffledCanvasProjects = ref<CanvasProject[]>([])
-const canvasViewportRef = ref<HTMLElement | null>(null)
-const canvasTiles = [
-  { id: 'tile-0', x: -1, y: -1 },
-  { id: 'tile-1', x: 0, y: -1 },
-  { id: 'tile-2', x: 1, y: -1 },
-  { id: 'tile-3', x: -1, y: 0 },
-  { id: 'tile-4', x: 0, y: 0 },
-  { id: 'tile-5', x: 1, y: 0 },
-  { id: 'tile-6', x: -1, y: 1 },
-  { id: 'tile-7', x: 0, y: 1 },
-  { id: 'tile-8', x: 1, y: 1 },
-] as const
-
-const testImageIds = [1015, 1018, 1024, 1027, 1035, 1039, 1043, 1050, 1067, 1074] as const
-
-let destroyCanvasDrag: (() => void) | null = null
-
-function shuffleProjects<T>(projects: T[]) {
-  const shuffled = [...projects]
-
-  for (let index = shuffled.length - 1; index > 0; index -= 1) {
-    const target = Math.floor(Math.random() * (index + 1))
-    ;[shuffled[index], shuffled[target]] = [shuffled[target], shuffled[index]]
-  }
-
-  return shuffled
-}
-
-const activeCanvasProjects = computed(() =>
-  shuffledCanvasProjects.value.length
-    ? shuffledCanvasProjects.value
-    : canvasProjectPool.value
-)
-
-const canvasCards = computed(() =>
-  activeCanvasProjects.value.map((project, index) => {
-    const imageId = testImageIds[index % testImageIds.length]
-    const seed = (index * 123.45) % 1
-    const shiftX = (seed * 60) - 30
-    const shiftY = (((seed * 789) % 1) * 60) - 30
-    const rotation = (seed * 6) - 3
-
-    return {
-      ...project,
-      image: `https://picsum.photos/id/${imageId}/576/800`,
-      baseX: (index % 4) * 420 + shiftX,
-      baseY: Math.floor(index / 4) * 520 + shiftY,
-      rotation,
-      zIndex: index % 5,
-      scale: 0.95 + (seed * 0.1),
-    }
-  })
-)
-
-const canvasTileCards = computed(() =>
-  Object.fromEntries(
-    canvasTiles.map((tile, tileIndex) => {
-      const tileShift = (tileIndex * 3) % canvasCards.value.length
-      const reorderedCards = [
-        ...canvasCards.value.slice(tileShift),
-        ...canvasCards.value.slice(0, tileShift),
-      ]
-
-      return [tile.id, reorderedCards.map((card, index) => {
-        const tileSeed = (((tileIndex + 1) * 0.173) + ((index + 1) * 0.097)) % 1
-        const tileShiftX = (tileSeed * 60) - 30
-        const tileShiftY = (((tileSeed * 541) % 1) * 60) - 30
-
-        return {
-          ...card,
-          baseX: card.baseX + tileShiftX,
-          baseY: card.baseY + tileShiftY,
-          rotation: card.rotation + ((tileSeed * 1.6) - 0.8),
-          zIndex: (card.zIndex + tileIndex) % 5,
-        }
-      })]
-    })
-  )
-)
-
-
-onMounted(async () => {
-  shuffledCanvasProjects.value = shuffleProjects(canvasProjectPool.value)
-  await nextTick()
-
-  if (!canvasViewportRef.value) {
-    return
-  }
-
-  destroyCanvasDrag = await setupInfiniteCanvas(canvasViewportRef.value)
-})
-
-onBeforeUnmount(() => {
-  destroyCanvasDrag?.()
-  destroyCanvasDrag = null
-})
-
-async function setupInfiniteCanvas(viewport: HTMLElement) {
-  const clusters = Array.from(
-    viewport.querySelectorAll<HTMLElement>('.works-canvas__cluster')
-  )
-
-  if (!clusters.length) {
-    return () => {}
-  }
-
-  const [{ Draggable }, { InertiaPlugin }] = await Promise.all([
-    import('gsap/Draggable'),
-    import('gsap/InertiaPlugin'),
-  ])
-
-  gsap.registerPlugin(Draggable, InertiaPlugin)
-
-  const proxy = document.createElement('div')
-  const xSetters = clusters.map((cluster) => gsap.quickSetter(cluster, 'x', 'px'))
-  const ySetters = clusters.map((cluster) => gsap.quickSetter(cluster, 'y', 'px'))
-  const resizeObserver = new ResizeObserver(measure)
-
-  let offsetX = 0
-  let offsetY = 0
-  let dragOriginX = 0
-  let dragOriginY = 0
-  let tileWidth = 0
-  let tileHeight = 0
-  let stepX = 0
-  let stepY = 0
-  let wrapX = gsap.utils.wrap(0, 1)
-  let wrapY = gsap.utils.wrap(0, 1)
-  let centerX = 0
-  let centerY = 0
-
-  function render() {
-    clusters.forEach((cluster, index) => {
-      const gridX = Number(cluster.dataset.gridX ?? 0)
-      const gridY = Number(cluster.dataset.gridY ?? 0)
-
-      xSetters[index](wrapX(centerX + gridX * stepX + offsetX))
-      ySetters[index](wrapY(centerY + gridY * stepY + offsetY))
-    })
-  }
-
-  function measure() {
-    const firstCluster = clusters[0]
-
-    if (!firstCluster) {
-      return
-    }
-
-    const styles = window.getComputedStyle(viewport)
-    const gapX = Number.parseFloat(styles.getPropertyValue('--works-cluster-gap-x')) || 120
-    const gapY = Number.parseFloat(styles.getPropertyValue('--works-cluster-gap-y')) || 40
-    const paddingLeft = Number.parseFloat(styles.paddingLeft) || 0
-    const paddingTop = Number.parseFloat(styles.paddingTop) || 0
-    const innerWidth = viewport.clientWidth - paddingLeft * 2
-    const innerHeight = viewport.clientHeight - paddingTop * 2
-
-    tileWidth = firstCluster.offsetWidth
-    tileHeight = firstCluster.offsetHeight
-    stepX = tileWidth + gapX
-    stepY = tileHeight + gapY
-    centerX = paddingLeft + (innerWidth - tileWidth) / 2
-    centerY = paddingTop + (innerHeight - tileHeight) / 2
-    wrapX = gsap.utils.wrap(centerX - stepX * 1.5, centerX + stepX * 1.5)
-    wrapY = gsap.utils.wrap(centerY - stepY * 1.5, centerY + stepY * 1.5)
-
-    render()
-  }
-
-  const draggable = Draggable.create(proxy, {
-    trigger: viewport,
-    type: 'x,y',
-    inertia: true,
-    allowNativeTouchScrolling: false,
-    onPressInit() {
-      dragOriginX = offsetX
-      dragOriginY = offsetY
-      viewport.classList.add('works-canvas__frame--dragging')
-      gsap.killTweensOf(proxy)
-      gsap.set(proxy, { x: 0, y: 0 })
-    },
-    onDrag() {
-      offsetX = dragOriginX + this.x
-      offsetY = dragOriginY + this.y
-      render()
-    },
-    onThrowUpdate() {
-      offsetX = dragOriginX + this.x
-      offsetY = dragOriginY + this.y
-      render()
-    },
-    onRelease() {
-      viewport.classList.remove('works-canvas__frame--dragging')
-
-      if (!this.tween) {
-        offsetX = dragOriginX + this.x
-        offsetY = dragOriginY + this.y
-        gsap.set(proxy, { x: 0, y: 0 })
-        render()
-      }
-    },
-    onThrowComplete() {
-      viewport.classList.remove('works-canvas__frame--dragging')
-      offsetX = dragOriginX + this.x
-      offsetY = dragOriginY + this.y
-      gsap.set(proxy, { x: 0, y: 0 })
-      render()
-    },
-  })[0]
-
-  measure()
-  resizeObserver.observe(viewport)
-
-  return () => {
-    viewport.classList.remove('works-canvas__frame--dragging')
-    resizeObserver.disconnect()
-    draggable.kill()
-    gsap.killTweensOf(proxy)
-  }
-}
-
-</script>
-
-<template>
-  <section id="works">
-    <h2
-      id="works-gallery"
-      class="section-kicker mb-16 scroll-mt-32 text-accent"
+﻿<template>
+  <section
+    id="works-gallery"
+    ref="sectionRef"
+    class="blueprint-section relative left-1/2 flex min-h-screen w-screen max-w-none -translate-x-1/2 flex-col overflow-hidden font-sans text-[#1D1E18] lg:flex-row"
+  >
+    <div
+      ref="leftStageRef"
+      class="works-left-stage relative flex min-h-[50vh] w-full items-center justify-center overflow-hidden bg-[#F6F4F0] lg:min-h-screen lg:w-[65%]"
     >
-      作品 / 技术
-    </h2>
+      <div
+        class="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden select-none"
+      >
+        <span
+          ref="wordmarkRef"
+          class="works-wordmark"
+          :style="worksWordmarkStyle"
+          >{{ worksWordmark }}</span
+        >
+      </div>
+      <div class="works-card-scene">
+        <div class="works-card-shadow" :style="shadowStyle"></div>
+        <canvas ref="canvasRef" class="works-three-canvas"></canvas>
+      </div>
+    </div>
 
-    <div>
-      <article class="works-archive group mx-auto w-full max-w-[100rem]">
-        <div class="works-archive__panel">
-          <div class="works-archive__artboard">
-            <a
-              aria-label="打开模仿页面项目"
-              class="works-archive__image-link"
-              href="https://notion-imitation.vercel.app/"
-              rel="noreferrer"
-              target="_blank"
-            >
-              <div class="works-archive__image-shell">
-                <img
-                  alt="模仿页面项目首页截图"
-                  class="works-archive__image"
-                  src="../assets/images/image.png"
-                >
-              </div>
-            </a>
-          </div>
-
-          <div class="works-archive__meta">
-            <h3 class="works-archive__title">
-              Notion 练习页
-            </h3>
-
-            <p class="works-archive__lead">
-              以 Notion 官网为参考完成的前端页面，主要用于练习 Flex 与 Grid 布局。
-            </p>
-
-            <div class="works-archive__specs">
-              <div class="works-archive__spec">
-                <span class="works-archive__label">技术栈</span>
-                <div class="works-archive__stack-list">
-                  <div class="works-archive__stack-pill">
-                    <Icon class="h-4 w-4 flex-none" mode="svg" name="logos:javascript" />
-                    <span>JavaScript</span>
-                  </div>
-                  <div class="works-archive__stack-pill">
-                    <Icon class="h-4 w-4 flex-none" mode="svg" name="logos:html-5" />
-                    <span>HTML5</span>
-                  </div>
-                  <div class="works-archive__stack-pill">
-                    <Icon class="h-4 w-4 flex-none" mode="svg" name="logos:css-3" />
-                    <span>CSS3</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="works-archive__spec">
-                <span class="works-archive__label">年份</span>
-                <span class="works-archive__value">2025</span>
-              </div>
-            </div>
-
-            <p class="works-archive__note">
-              这不是一个完整的项目，而是我在学习阶段的一次练习。它保留了我当时对页面布局与还原的理解。
-            </p>
-
-            <a
-              aria-label="打开作品档案"
-              class="works-archive__link"
-              href="https://notion-imitation.vercel.app/"
-              rel="noreferrer"
-              target="_blank"
-            >
-              <span class="works-archive__link-text">查看档案</span>
-              <span aria-hidden="true" class="works-archive__glyph">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="1.15"
-                >
-                  <path d="M6 18L18 6" />
-                  <path d="M9 6H18V15" />
-                </svg>
-              </span>
-            </a>
-          </div>
-        </div>
-      </article>
-
-      <section class="works-canvas mx-auto w-full" aria-label="作品画布">
-        <div aria-hidden="true" class="works-canvas__marquee-slot">
-          <div class="works-canvas__marquee-inner">
-            <div class="works-canvas__marquee-strip works-canvas__marquee-strip--primary">
-              <span
-                v-for="index in 20"
-                :key="`top-marquee-a-${index}`"
-                class="works-canvas__marquee-item"
-              >
-                AIpenglow
-              </span>
-            </div>
-            <div class="works-canvas__marquee-strip works-canvas__marquee-strip--secondary">
-              <span
-                v-for="index in 20"
-                :key="`top-marquee-b-${index}`"
-                class="works-canvas__marquee-item"
-              >
-                AIpenglow
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div ref="canvasViewportRef" class="works-canvas__frame">
+    <div
+      class="blueprint-grid blueprint-frame relative w-full lg:w-[35%] bg-white flex flex-col justify-center p-8 md:p-16 lg:px-24 lg:py-20 border-l border-[#1D1E18]/10"
+    >
+      <span
+        aria-hidden="true"
+        class="blueprint-frame-corner blueprint-frame-corner--bl"
+        >└</span
+      >
+      <span
+        aria-hidden="true"
+        class="blueprint-frame-corner blueprint-frame-corner--br"
+        >┘</span
+      >
+      <div class="mx-auto flex w-full max-w-[520px] flex-col gap-8">
+        <div class="blueprint-block relative mb-4">
           <div
-            v-for="tile in canvasTiles"
-            :key="tile.id"
-            class="works-canvas__cluster"
-            :data-grid-x="tile.x"
-            :data-grid-y="tile.y"
+            class="absolute -top-6 -left-12 text-[9px] font-mono text-[#1D1E18]/40 leading-tight"
           >
-            <div
-              v-for="(card, cardIndex) in canvasTileCards[tile.id] || []"
-              :key="`${tile.id}-card-${cardIndex}-${card.title}`"
-              class="works-canvas__card-shell"
-              :style="{
-                position: 'absolute',
-                left: `${card.baseX}px`,
-                top: `${card.baseY}px`,
-                zIndex: card.zIndex,
-                '--card-scale': `${card.scale}`,
-                transform: `rotate(${card.rotation}deg)`,
-              }"
+            X 128,<br />Y 45
+          </div>
+          <div
+            class="absolute -bottom-2 -left-8 text-[9px] font-mono text-[#1D1E18]/40"
+          >
+            B-2
+          </div>
+          <div
+            class="cad-hook-tl"
+            style="border-color: #000; width: 20px; height: 20px; top: -11px"
+          ></div>
+          <div
+            class="cad-hook-tr"
+            style="border-color: #000; width: 20px; height: 20px; top: -11px"
+          ></div>
+          <div
+            class="cad-hook-bl"
+            style="border-color: #000; width: 20px; height: 20px"
+          ></div>
+          <div
+            class="cad-hook-br"
+            style="border-color: #000; width: 20px; height: 20px"
+          ></div>
+          <h2
+            class="works-title-wordmark pl-2 text-left text-[5.375rem] md:text-[7.875rem] leading-[0.68] font-black font-sans watermark-outline tracking-tighter -mb-3 md:-mb-5"
+          >
+            NOTION
+          </h2>
+          <h3
+            class="relative z-10 text-4xl md:text-5xl font-black text-[#111] tracking-widest pl-2"
+          >
+            练习页
+          </h3>
+        </div>
+        <div
+          class="blueprint-block relative border border-[#1D1E18]/20 bg-transparent px-[0.6875rem] py-[0.4375rem] md:px-[0.9375rem] md:py-[0.6875rem]"
+        >
+          <div
+            class="absolute -top-4 -left-10 text-[9px] font-mono text-[#1D1E18]/40"
+          >
+            X 4.1
+          </div>
+          <div class="cad-hook-tr"></div>
+          <div
+            class="font-mono text-[11px] uppercase tracking-[0.15em] mb-3 font-bold text-[#1D1E18]/70"
+          >
+            DESCRIPTION:
+          </div>
+          <p
+            class="text-[13px] md:text-sm font-medium leading-relaxed text-[#1D1E18]/90"
+          >
+            以Notion 官网为参考完成的练习页 ， 主要用于练习 Flex 与 Grid 布局
+          </p>
+        </div>
+
+        <div
+          class="blueprint-block relative border border-[#1D1E18]/20 bg-transparent px-[0.6875rem] py-[0.4375rem] md:px-[0.9375rem] md:py-[0.6875rem]"
+        >
+          <div
+            class="absolute -top-2 -left-10 text-[9px] font-mono text-[#1D1E18]/40"
+          >
+            X 8-2
+          </div>
+          <div
+            class="absolute -bottom-2 -left-10 text-[9px] font-mono text-[#1D1E18]/40"
+          >
+            X 5-2
+          </div>
+          <div
+            class="absolute -top-2 -right-6 text-[9px] font-mono text-[#1D1E18]/40"
+          >
+            B-2
+          </div>
+          <div
+            class="font-mono text-[11px] uppercase tracking-[0.15em] mb-4 font-bold text-[#1D1E18]/70"
+          >
+            TECH STACK:
+          </div>
+          <div class="flex flex-wrap gap-2 md:gap-3">
+            <span class="tech-pill"
+              ><span class="tech-dot"></span>JavaScript</span
             >
-              <article
-                :class="[
-                  'works-canvas__card',
-                  `works-canvas__card--${card.accent}`,
-                ]"
-              >
-                <div class="works-canvas__card-surface">
-                  <div class="works-canvas__card-image-shell">
-                    <img
-                      :src="card.image"
-                      :alt="card.title"
-                      class="works-canvas__card-image"
-                      loading="lazy"
-                      draggable="false"
-                    />
-                  </div>
-                  <div class="works-canvas__card-copy">
-                    <p class="works-canvas__card-meta">
-                      {{ card.meta }}
-                    </p>
-                    <h3 class="works-canvas__card-title">
-                      {{ card.title }}
-                    </h3>
-                  </div>
-                </div>
-              </article>
-            </div>
+            <span class="tech-pill"><span class="tech-dot"></span>HTML5</span>
+            <span class="tech-pill"><span class="tech-dot"></span>CSS3</span>
+            <span class="tech-pill"><span class="tech-dot"></span>React</span>
+            <span class="tech-pill"
+              ><span class="tech-dot"></span>Tailwind CSS</span
+            >
           </div>
         </div>
 
         <div
-          aria-hidden="true"
-          class="works-canvas__marquee-slot works-canvas__marquee-slot--slow"
+          class="blueprint-block relative border border-[#1D1E18]/20 bg-transparent px-[0.6875rem] py-[0.4375rem] md:px-[0.9375rem] md:py-[0.6875rem]"
         >
-          <div class="works-canvas__marquee-inner">
-            <div class="works-canvas__marquee-strip works-canvas__marquee-strip--primary">
-              <span
-                v-for="index in 20"
-                :key="`bottom-marquee-a-${index}`"
-                class="works-canvas__marquee-item"
-              >
-                AIpenglow
-              </span>
-            </div>
-            <div class="works-canvas__marquee-strip works-canvas__marquee-strip--secondary">
-              <span
-                v-for="index in 20"
-                :key="`bottom-marquee-b-${index}`"
-                class="works-canvas__marquee-item"
-              >
-                AIpenglow
-              </span>
-            </div>
+          <div
+            class="absolute -top-2 -left-10 text-[9px] font-mono text-[#1D1E18]/40"
+          >
+            X 6-3
+          </div>
+          <div
+            class="absolute -bottom-2 -left-12 text-[9px] font-mono text-[#1D1E18]/40"
+          >
+            X 129
+          </div>
+          <div
+            class="font-mono text-[11px] uppercase tracking-[0.15em] mb-2 font-bold text-[#1D1E18]/70"
+          >
+            ROLE:
+          </div>
+          <p class="text-[13px] md:text-sm font-bold text-[#1D1E18]">
+            UI/UX Design, Frontend Dev
+          </p>
+        </div>
+
+        <div
+          class="blueprint-block relative border border-[#1D1E18]/20 bg-transparent px-[0.6875rem] py-[0.4375rem] md:px-[0.9375rem] md:py-[0.6875rem] mb-12"
+        >
+          <div
+            class="absolute -top-2 -left-10 text-[9px] font-mono text-[#1D1E18]/40"
+          >
+            X 8-1
+          </div>
+          <div
+            class="absolute -bottom-6 -left-10 text-[9px] font-mono text-[#1D1E18]/40"
+          >
+            X 4-5
+          </div>
+          <div
+            class="absolute -top-2 -right-6 text-[9px] font-mono text-[#1D1E18]/40"
+          >
+            B-2
+          </div>
+          <div class="cad-hook-bl"></div>
+          <div
+            class="font-mono text-[11px] uppercase tracking-[0.15em] mb-2 font-bold text-[#1D1E18]/70"
+          >
+            YEAR:
+          </div>
+          <p class="text-[13px] md:text-sm font-bold text-[#1D1E18]">2025</p>
+        </div>
+
+        <div
+          ref="stampRef"
+          class="blueprint-stamp relative z-20 flex w-[12rem] flex-col gap-1 bg-white/90 px-3 py-1 backdrop-blur-sm"
+        >
+          <span
+            aria-hidden="true"
+            class="absolute left-[-5px] right-[-5px] top-[-0.5px] h-px bg-[#1D1E18]/80"
+          ></span>
+          <span
+            aria-hidden="true"
+            class="absolute bottom-[-0.5px] left-[-5px] right-[-5px] h-px bg-[#1D1E18]/80"
+          ></span>
+          <span
+            aria-hidden="true"
+            class="absolute bottom-[-5px] left-[-0.5px] top-[-5px] w-px bg-[#1D1E18]/80"
+          ></span>
+          <span
+            aria-hidden="true"
+            class="absolute bottom-[-5px] right-[-0.5px] top-[-5px] w-px bg-[#1D1E18]/80"
+          ></span>
+          <div
+            class="-mx-3 -mt-1 flex items-center justify-between gap-3 border-b border-[#1D1E18]/80 px-3 pb-1 pt-1 font-mono text-[9px] uppercase tracking-[0.14em] text-[#1D1E18]/80"
+          >
+            <span>time</span>
+            <span
+              class="flex h-4 w-4 items-center justify-center border border-[#1D1E18]/80 text-[10px] leading-none text-[#1D1E18]"
+              >X</span
+            >
+          </div>
+          <div
+            class="relative px-3 py-1 text-center font-bold text-[13px] md:text-sm tracking-[0.1em] text-[#1D1E18]"
+          >
+            <span
+              class="absolute -left-[0.08rem] -top-[0.08rem] text-[11px] font-black leading-none text-[#1D1E18]/75"
+              >+</span
+            >
+            <span
+              class="absolute -right-[0.08rem] -top-[0.08rem] text-[11px] font-black leading-none text-[#1D1E18]/75"
+              >+</span
+            >
+            <span
+              class="absolute -bottom-[0.08rem] -left-[0.08rem] text-[11px] font-black leading-none text-[#1D1E18]/75"
+              >+</span
+            >
+            <span
+              class="absolute -bottom-[0.08rem] -right-[0.08rem] text-[11px] font-black leading-none text-[#1D1E18]/75"
+              >+</span
+            >
+            <div>完成时间：一周</div>
           </div>
         </div>
-      </section>
+      </div>
     </div>
   </section>
 </template>
 
+<script setup lang="ts">
+import { ref, onMounted, onBeforeUnmount, nextTick, watch } from "vue";
+import * as THREE from "three";
+import { gsap } from "gsap";
+import notionTexture from "~/assets/images/image.png";
+
+const sectionRef = ref<HTMLElement | null>(null);
+const leftStageRef = ref<HTMLElement | null>(null);
+const wordmarkRef = ref<HTMLElement | null>(null);
+const canvasRef = ref<HTMLCanvasElement | null>(null);
+const stampRef = ref<HTMLElement | null>(null);
+
+const worksWordmark = ref("Notion");
+const worksWordmarkStyle = ref<Record<string, string>>({});
+const shadowStyle = ref<Record<string, string>>({});
+
+let gsapCtx: gsap.Context | null = null;
+let wordmarkResizeObserver: ResizeObserver | null = null;
+let canvasResizeObserver: ResizeObserver | null = null;
+let handleWordmarkFontsReady: (() => void) | null = null;
+let tiltMouseMove: ((e: MouseEvent) => void) | null = null;
+let tiltMouseLeave: (() => void) | null = null;
+
+// Three.js state
+let renderer: THREE.WebGLRenderer | null = null;
+let scene: THREE.Scene | null = null;
+let camera: THREE.PerspectiveCamera | null = null;
+let cardMeshRef: THREE.Mesh | null = null;
+
+const CARD_W = 3.024;
+const CARD_H = 1.8462;
+const CARD_D = 0.1125;
+const CARD_BEVEL_T = 0.012;
+const CARD_ROT = { x: -0.24, y: -0.38, z: 0.0 };
+
+const prefersReducedMotion = () =>
+  import.meta.client &&
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// ─── Wordmark ───────────────────────────────────────────────────────────────
+
+const syncWorksWordmarkFit = () => {
+  if (!leftStageRef.value || !wordmarkRef.value) return;
+  const cw = leftStageRef.value.clientWidth;
+  const ch = leftStageRef.value.clientHeight;
+  if (!cw || !ch) return;
+  const nw = wordmarkRef.value.offsetWidth;
+  const nh = wordmarkRef.value.offsetHeight;
+  if (!nw || !nh) return;
+  worksWordmarkStyle.value = {
+    transform: `scale(${(cw / nw) * 0.96}, ${(ch / nh) * 0.92})`,
+  };
+};
+
+// ─── CSS shadow sizing ───────────────────────────────────────────────────────
+
+function updateShadowStyle() {
+  const canvas = canvasRef.value;
+  if (!canvas) return;
+  const W = canvas.clientWidth;
+  const H = canvas.clientHeight;
+  if (!W || !H) return;
+  const visH = 2 * Math.tan((36 * Math.PI) / 180 / 2) * 5.7;
+  const visW = visH * (W / H);
+  const cardWpx = (CARD_W / visW) * W;
+  const cardHpx = (CARD_H / visH) * H;
+  const spreadW = cardWpx * 1.026;
+  const spreadH = cardHpx * 1.026;
+  // Dynamic shadow shift: follows rotation delta from base pose
+  const rotDeltaX = cardMeshRef ? cardMeshRef.rotation.x - CARD_ROT.x : 0;
+  const rotDeltaY = cardMeshRef ? cardMeshRef.rotation.y - CARD_ROT.y : 0;
+  const offsetX = cardWpx * 0.04 + 150 + rotDeltaY * 110;
+  const offsetY = cardHpx * 0.06 + 80 - rotDeltaX * 110;
+  // Follow card's world-space x position
+  const cardScreenX = cardMeshRef
+    ? W / 2 + (cardMeshRef.position.x / visW) * W
+    : W / 2;
+  shadowStyle.value = {
+    width: `${spreadW}px`,
+    height: `${spreadH}px`,
+    left: `${cardScreenX + offsetX - spreadW / 2}px`,
+    top: `${H / 2 + offsetY - spreadH / 2}px`,
+  };
+}
+
+function updateCardPosition() {
+  if (!cardMeshRef || !canvasRef.value) return;
+  const H = canvasRef.value.clientHeight;
+  if (!H) return;
+  const unitsPerPx = 2 * Math.tan((36 * Math.PI) / 180 / 2) * 5.7 / H;
+  cardMeshRef.position.x = -100 * unitsPerPx;
+}
+
+// ─── Three.js init ───────────────────────────────────────────────────────────
+
+function initThree() {
+  const canvas = canvasRef.value;
+  if (!canvas) return;
+
+  const W = canvas.clientWidth || 600;
+  const H = canvas.clientHeight || 500;
+
+  // Renderer (transparent bg so stage bg shows through)
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(W, H, false);
+
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(36, W / H, 0.1, 100);
+  camera.position.z = 5.7;
+
+  // 中性白光，避免暖色污染白色材质
+  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+
+  const key = new THREE.DirectionalLight(0xffffff, 1.8);
+  key.position.set(3, 3, 5);
+  scene.add(key);
+
+  // 左侧补光——让侧面（书脊）和正面有明暗对比
+  const fill = new THREE.DirectionalLight(0xe8eeff, 0.4);
+  fill.position.set(-4, 0, 2);
+  scene.add(fill);
+
+  // 圆角矩形 Shape（等同于 CSS border-radius）
+  const r = 0.14;
+  const hw = CARD_W / 2;
+  const hh = CARD_H / 2;
+  const shape = new THREE.Shape();
+  shape.moveTo(-hw + r, -hh);
+  shape.lineTo(hw - r, -hh);
+  shape.absarc(hw - r, -hh + r, r, -Math.PI / 2, 0, false);
+  shape.lineTo(hw, hh - r);
+  shape.absarc(hw - r, hh - r, r, 0, Math.PI / 2, false);
+  shape.lineTo(-hw + r, hh);
+  shape.absarc(-hw + r, hh - r, r, Math.PI / 2, Math.PI, false);
+  shape.lineTo(-hw, -hh + r);
+  shape.absarc(-hw + r, -hh + r, r, Math.PI, Math.PI * 1.5, false);
+
+  const geo = new THREE.ExtrudeGeometry(shape, {
+    depth: CARD_D,
+    bevelEnabled: true,
+    bevelThickness: CARD_BEVEL_T,
+    bevelSize: 0.008,
+    bevelSegments: 3,
+  });
+  geo.translate(0, 0, -CARD_D / 2); // 居中到原点
+
+  // ExtrudeGeometry: 材质索引 0 = 正面/背面，1 = 侧面（挤出壁）
+  const frontMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 0.45,
+    metalness: 0.0,
+  });
+  const sideMat = new THREE.MeshStandardMaterial({
+    color: 0xf0f0f0,
+    roughness: 0.6,
+    metalness: 0.0,
+  });
+
+  const cardMesh = new THREE.Mesh(geo, [frontMat, sideMat]);
+  cardMeshRef = cardMesh;
+  cardMesh.rotation.set(CARD_ROT.x, CARD_ROT.y, CARD_ROT.z);
+  scene.add(cardMesh);
+
+  // 正面图片平面：手动 UV 确保完整铺满 CARD_W x CARD_H
+  const tex = new THREE.TextureLoader().load(notionTexture, () => {
+    renderer?.render(scene!, camera!);
+  });
+
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = THREE.ClampToEdgeWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.minFilter = THREE.LinearMipmapLinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+  const imageGeo = new THREE.ShapeGeometry(shape);
+
+  const pos = imageGeo.attributes.position as THREE.BufferAttribute;
+  const uvs: number[] = [];
+
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    uvs.push((x + hw) / CARD_W, (y + hh) / CARD_H);
+  }
+
+  imageGeo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+
+  const imagePlane = new THREE.Mesh(
+    imageGeo,
+    new THREE.MeshBasicMaterial({
+      map: tex,
+      transparent: false,
+      side: THREE.FrontSide,
+    }),
+  );
+  imagePlane.position.z = CARD_D / 2 + CARD_BEVEL_T + 0.003;
+  cardMesh.add(imagePlane);
+
+  updateCardPosition();
+  renderer.render(scene, camera);
+}
+
+function resizeThree() {
+  const canvas = canvasRef.value;
+  if (!canvas || !renderer || !camera) return;
+  const W = canvas.clientWidth;
+  const H = canvas.clientHeight;
+  if (!W || !H) return;
+  renderer.setSize(W, H, false);
+  camera.aspect = W / H;
+  camera.updateProjectionMatrix();
+  updateCardPosition();
+  renderer.render(scene!, camera);
+  updateShadowStyle();
+}
+
+// ─── Mouse tilt ──────────────────────────────────────────────────────────────
+
+function initMouseTilt() {
+  const stage = leftStageRef.value;
+  if (!stage || !cardMeshRef || prefersReducedMotion()) return;
+
+  const MAX_TILT = 0.22; // radians (~12.5°)
+
+  tiltMouseMove = (e: MouseEvent) => {
+    const rect = stage.getBoundingClientRect();
+    const mx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    const my = ((e.clientY - rect.top) / rect.height) * 2 - 1;
+
+    gsap.to(cardMeshRef!.rotation, {
+      x: CARD_ROT.x + my * MAX_TILT,
+      y: CARD_ROT.y + mx * MAX_TILT,
+      duration: 0.5,
+      ease: "power2.out",
+      overwrite: true,
+      onUpdate: () => {
+        renderer?.render(scene!, camera!);
+        updateShadowStyle();
+      },
+    });
+  };
+
+  tiltMouseLeave = () => {
+    gsap.to(cardMeshRef!.rotation, {
+      x: CARD_ROT.x,
+      y: CARD_ROT.y,
+      duration: 0.9,
+      ease: "power3.out",
+      overwrite: true,
+      onUpdate: () => {
+        renderer?.render(scene!, camera!);
+        updateShadowStyle();
+      },
+    });
+  };
+
+  stage.addEventListener("mousemove", tiltMouseMove);
+  stage.addEventListener("mouseleave", tiltMouseLeave);
+}
+
+// ─── Lifecycle ───────────────────────────────────────────────────────────────
+
+onMounted(async () => {
+  await nextTick();
+  syncWorksWordmarkFit();
+
+  wordmarkResizeObserver = new ResizeObserver(syncWorksWordmarkFit);
+  if (leftStageRef.value) wordmarkResizeObserver.observe(leftStageRef.value);
+  if (wordmarkRef.value) wordmarkResizeObserver.observe(wordmarkRef.value);
+
+  if (import.meta.client && "fonts" in document) {
+    handleWordmarkFontsReady = syncWorksWordmarkFit;
+    void document.fonts.ready.then(syncWorksWordmarkFit);
+    document.fonts.addEventListener?.("loadingdone", handleWordmarkFontsReady);
+  }
+
+  if (import.meta.client && canvasRef.value) {
+    initThree();
+    updateShadowStyle();
+    initMouseTilt();
+    canvasResizeObserver = new ResizeObserver(resizeThree);
+    canvasResizeObserver.observe(canvasRef.value);
+  }
+
+  if (!sectionRef.value || prefersReducedMotion()) return;
+
+  const { ScrollTrigger } = await import("gsap/ScrollTrigger");
+  gsap.registerPlugin(ScrollTrigger);
+
+  // Blueprint blocks entrance
+  gsapCtx = gsap.context(() => {
+    gsap.from(gsap.utils.toArray<HTMLElement>(".blueprint-block"), {
+      x: 30,
+      opacity: 0,
+      duration: 0.8,
+      stagger: 0.15,
+      ease: "power3.out",
+      scrollTrigger: {
+        trigger: ".blueprint-grid",
+        start: "top 75%",
+        once: true,
+      },
+    });
+
+    if (stampRef.value) {
+      gsap.from(stampRef.value, {
+        scale: 2,
+        opacity: 0,
+        rotation: -15,
+        duration: 0.6,
+        delay: 0.8,
+        ease: "back.out(2)",
+        scrollTrigger: {
+          trigger: stampRef.value,
+          start: "top 90%",
+          once: true,
+        },
+      });
+    }
+  }, sectionRef.value);
+});
+
+watch(worksWordmark, async () => {
+  await nextTick();
+  syncWorksWordmarkFit();
+});
+
+onBeforeUnmount(() => {
+  renderer?.dispose();
+  gsapCtx?.revert();
+  wordmarkResizeObserver?.disconnect();
+  canvasResizeObserver?.disconnect();
+  if (tiltMouseMove) leftStageRef.value?.removeEventListener("mousemove", tiltMouseMove);
+  if (tiltMouseLeave) leftStageRef.value?.removeEventListener("mouseleave", tiltMouseLeave);
+  if (import.meta.client && handleWordmarkFontsReady && "fonts" in document) {
+    document.fonts.removeEventListener?.(
+      "loadingdone",
+      handleWordmarkFontsReady,
+    );
+  }
+});
+</script>
+
 <style scoped>
-.works-archive {
-  position: relative;
+.blueprint-grid {
+  background-image:
+    linear-gradient(rgba(29, 30, 24, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(29, 30, 24, 0.05) 1px, transparent 1px);
+  background-size: 32px 32px;
+  background-position: center center;
 }
 
-.works-archive__panel {
-  position: relative;
-  display: grid;
-  gap: clamp(1.6rem, 3vw, 3.2rem);
-  overflow: hidden;
-  border: 1px solid rgb(122 156 182 / 0.16);
-  border-radius: 12px;
-  background: #fdfaf4;
-  padding: clamp(1.1rem, 2.4vw, 1.7rem);
-  box-shadow:
-    0 28px 64px rgb(47 58 74 / 0.075),
-    0 3px 10px rgb(47 58 74 / 0.03),
-    inset 0 1px 0 rgb(255 255 255 / 0.82);
-  transition:
-    transform 500ms ease,
-    box-shadow 500ms ease,
-    border-color 500ms ease;
+.blueprint-frame {
+  --blueprint-frame-inset: 0.875rem;
 }
 
-.works-archive__panel::before {
-  content: '';
+.blueprint-frame::before {
+  content: "";
   position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 16% 18%, rgb(255 255 255 / 0.32), transparent 24%),
-    linear-gradient(180deg, rgb(255 255 255 / 0.22), transparent 38%);
-  opacity: 0.85;
+  inset: var(--blueprint-frame-inset);
+  border: 1.5px solid rgba(29, 30, 24, 0.18);
   pointer-events: none;
 }
 
-.works-archive__panel::after {
-  content: '';
+.blueprint-frame-corner {
   position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(180deg, rgb(255 255 255 / 0.16), transparent 26%),
-    radial-gradient(circle at 82% 80%, rgb(47 58 74 / 0.025), transparent 20%);
-  opacity: 0.7;
-  pointer-events: none;
-}
-
-.works-archive:hover .works-archive__panel {
-  border-color: rgb(122 156 182 / 0.26);
-  box-shadow:
-    0 34px 72px rgb(47 58 74 / 0.09),
-    0 6px 14px rgb(47 58 74 / 0.04),
-    inset 0 1px 0 rgb(255 255 255 / 0.9);
-  transform: translateY(-4px);
-}
-
-.works-archive__artboard,
-.works-archive__meta {
-  position: relative;
+  bottom: calc(var(--blueprint-frame-inset) + 0.45rem);
   z-index: 1;
-}
-
-.works-archive__artboard {
-  padding: 0;
-}
-
-.works-archive__image-link {
-  display: block;
-  text-decoration: none;
-}
-
-.works-archive__image-shell {
-  position: relative;
-  aspect-ratio: 15 / 9;
-  overflow: hidden;
-  border-radius: 20px;
-  background: #fefefe;
-  box-shadow:
-    26px 30px 56px rgb(47 58 74 / 0.16),
-    0 12px 20px rgb(47 58 74 / 0.05),
-    inset 0 1px 0 rgb(255 255 255 / 0.72);
-}
-
-.works-archive__image-shell::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow: inset 0 0 0 1px rgb(47 58 74 / 0.05);
+  font-family: "Georgia", "Times New Roman", "Book Antiqua", serif;
+  font-size: 1.35rem;
+  line-height: 1;
+  color: rgba(29, 30, 24, 0.38);
   pointer-events: none;
-}
-
-.works-archive__image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center top;
-  opacity: 0.97;
-  transition:
-    transform 1.6s ease,
-    opacity 500ms ease,
-    filter 500ms ease;
-}
-
-.works-archive:hover .works-archive__image {
-  transform: scale(1.05);
-  opacity: 1;
-  filter: saturate(1.03);
-}
-
-.works-archive__meta {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 1rem;
-  height: 100%;
-  padding: 0 0 0 0.25rem;
-  text-align: left;
-}
-
-.works-archive__title {
-  margin: 0;
-  max-width: none;
-  font-family: 'Cormorant Garamond', serif;
-  font-size: clamp(2.45rem, 4vw, 3.6rem);
-  font-weight: 600;
-  line-height: 0.94;
-  letter-spacing: -0.05em;
-  color: #2f3a4a;
-}
-
-.works-archive__title::after {
-  content: '';
-  display: block;
-  width: 4.5rem;
-  height: 1px;
-  margin-top: 0.72rem;
-  background: linear-gradient(90deg, rgb(47 58 74 / 0.4), transparent);
-}
-
-.works-archive__lead {
-  margin: 0;
-  max-width: 27ch;
-  font-family: 'Inter', sans-serif;
-  font-size: 1rem;
-  line-height: 1.9;
-  color: rgb(47 58 74 / 0.75);
-  text-align: left;
-}
-
-.works-archive__specs {
-  display: grid;
-  gap: 0.75rem;
-  padding-top: 0.35rem;
-}
-
-.works-archive__spec {
-  display: grid;
-  grid-template-columns: minmax(4.2rem, 4.8rem) 1fr;
-  gap: 1rem;
-  align-items: center;
-}
-
-.works-archive__label {
-  font-family: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
-  font-size: 0.64rem;
-  font-weight: 500;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: #2f3a4a;
-  line-height: 1;
-}
-
-.works-archive__value {
-  font-family: 'Inter', sans-serif;
-  font-size: 0.95rem;
-  line-height: 1.75;
-  color: rgb(47 58 74 / 0.82);
-}
-
-.works-archive__stack-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-}
-
-.works-archive__stack-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  border: 1px solid rgb(47 58 74 / 0.12);
-  border-radius: 999px;
-  background: rgb(255 255 255 / 0.76);
-  padding: 0.42rem 0.82rem;
-  font-family: 'Inter', sans-serif;
-  font-size: 0.82rem;
-  font-weight: 500;
-  line-height: 1;
-  color: rgb(47 58 74 / 0.84);
-  box-shadow: 0 8px 20px rgb(47 58 74 / 0.04);
-}
-
-.works-archive__note {
-  margin: 0;
-  max-width: 27ch;
-  font-family: 'Inter', sans-serif;
-  font-size: 0.9rem;
-  line-height: 1.88;
-  color: rgb(47 58 74 / 0.6);
-  text-align: left;
-}
-
-.works-archive__link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.6rem;
-  align-self: flex-start;
-  margin-top: 0.25rem;
-  text-decoration: none;
-  color: #2f3a4a;
-  transition:
-    opacity 300ms ease,
-    transform 300ms ease;
-}
-
-.works-archive__link:hover {
-  opacity: 0.72;
-  transform: translateX(1px);
-}
-
-.works-archive__link-text {
-  font-family: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
-  font-size: 0.72rem;
-  font-weight: 500;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-}
-
-.works-archive__glyph {
-  display: inline-flex;
-  width: 1.25rem;
-  height: 1.25rem;
-  opacity: 1;
-  transition:
-    transform 300ms ease,
-    opacity 300ms ease;
-}
-
-.works-archive__glyph svg {
-  width: 100%;
-  height: 100%;
-}
-
-.works-archive:hover .works-archive__glyph {
-  opacity: 0.72;
-  transform: translate(2px, -2px);
-}
-
-.works-canvas {
-  --works-marquee-height: clamp(2rem, 3.2vw, 2.6rem);
-  position: relative;
-  margin-top: 12rem;
-  display: grid;
-  grid-template-rows: var(--works-marquee-height) minmax(0, 1fr) var(--works-marquee-height);
-  width: 100vw;
-  min-height: calc(100svh - 80px);
-  min-height: calc(100dvh - 80px);
-  max-width: none;
-  margin-left: calc(50% - 50vw);
-  margin-right: calc(50% - 50vw);
-}
-
-.works-canvas__marquee-slot {
-  height: var(--works-marquee-height);
-  --works-marquee-duration: 22s;
-  position: relative;
-  background: #fff;
-  overflow: hidden;
-}
-
-.works-canvas__marquee-slot--slow {
-  --works-marquee-duration: 26s;
-}
-
-.works-canvas__marquee-inner {
-  position: relative;
-  height: 100%;
-  width: 100%;
-}
-
-.works-canvas__marquee-strip {
-  position: absolute;
-  top: 0;
-  left: 0;
-  display: flex;
-  min-width: max-content;
-  height: 100%;
-  align-items: center;
-  flex-shrink: 0;
-  will-change: transform;
-}
-
-.works-canvas__marquee-strip--primary {
-  animation: works-canvas-marquee-primary var(--works-marquee-duration) linear infinite;
-}
-
-.works-canvas__marquee-strip--secondary {
-  animation: works-canvas-marquee-secondary var(--works-marquee-duration) linear infinite;
-}
-
-.works-canvas__marquee-item {
-  display: inline-flex;
-  align-items: center;
-  white-space: nowrap;
-  padding-right: clamp(1rem, 2.2vw, 1.9rem);
-  font-family: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
-  font-size: clamp(0.72rem, 1vw, 0.84rem);
-  font-weight: 500;
-  letter-spacing: 0.26em;
-  color: rgb(47 58 74 / 0.66);
-}
-
-@keyframes works-canvas-marquee-primary {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-
-  to {
-    transform: translate3d(calc(-100% + 1px), 0, 0);
-  }
-}
-
-@keyframes works-canvas-marquee-secondary {
-  from {
-    transform: translate3d(calc(100% - 1px), 0, 0);
-  }
-
-  to {
-    transform: translate3d(0, 0, 0);
-  }
-}
-
-.works-canvas__frame {
-  --works-cluster-gap-x: 120px;
-  --works-cluster-gap-y: 80px;
-  --works-card-gap: 95px;
-  --works-card-width: 288px;
-  --works-card-height: 400px;
-  position: relative;
-  display: block;
-  width: 100%;
-  height: 100%;
-  min-height: calc(100svh - 80px - (var(--works-marquee-height) * 2));
-  min-height: calc(100dvh - 80px - (var(--works-marquee-height) * 2));
-  overflow: hidden;
-  isolation: isolate;
-  cursor: grab;
-  touch-action: none;
   user-select: none;
-  border: 1px solid rgb(255 255 255 / 0.12);
-  border-radius: 0;
-  background:
-    linear-gradient(rgb(255 255 255 / 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(255 255 255 / 0.055) 1px, transparent 1px),
-    #000;
-  background-size:
-    2rem 2rem,
-    2rem 2rem,
-    auto;
-  background-position:
-    -1px -1px,
-    -1px -1px,
-    0 0;
-  padding-block: clamp(0rem, 0.2vw, 0.125rem);
-  padding-inline: clamp(6.8rem, 13vw, 12rem);
-  box-shadow:
-    0 22px 48px rgb(0 0 0 / 0.22),
-    inset 0 1px 0 rgb(255 255 255 / 0.08);
 }
 
-.works-canvas__frame--dragging {
-  cursor: grabbing;
+.blueprint-frame-corner--bl {
+  left: calc(var(--blueprint-frame-inset) + 0.3rem);
+}
+.blueprint-frame-corner--br {
+  right: calc(var(--blueprint-frame-inset) + 0.3rem);
 }
 
-.works-canvas__frame::before {
-  content: '';
+.blueprint-stamp {
   position: absolute;
-  inset: 0;
-  z-index: 0;
-  border-radius: inherit;
-  background:
-    linear-gradient(rgb(255 255 255 / 0.16) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(255 255 255 / 0.16) 1px, transparent 1px);
-  background-size: 2rem 2rem;
-  background-position: -1px -1px;
-  pointer-events: none;
-  -webkit-mask-image: radial-gradient(
-    ellipse 74% 62% at 50% 50%,
-    rgb(0 0 0 / 1) 0%,
-    rgb(0 0 0 / 0.96) 28%,
-    rgb(0 0 0 / 0.62) 66%,
-    rgb(0 0 0 / 0.16) 86%,
-    transparent 100%
-  );
-  mask-image: radial-gradient(
-    ellipse 74% 62% at 50% 50%,
-    rgb(0 0 0 / 1) 0%,
-    rgb(0 0 0 / 0.96) 28%,
-    rgb(0 0 0 / 0.62) 66%,
-    rgb(0 0 0 / 0.16) 86%,
-    transparent 100%
-  );
+  right: calc(var(--blueprint-frame-inset) + 1.9rem);
+  bottom: calc(var(--blueprint-frame-inset) + 1.85rem);
 }
 
-.works-canvas__cluster {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 1;
-  width: 1600px;
-  height: 1520px;
+.works-wordmark {
+  display: block;
+  text-align: center;
+  white-space: nowrap;
+  font-family: "Georgia", "Times New Roman", "Book Antiqua", serif;
+  font-weight: 500;
+  font-size: 16rem;
+  line-height: 0.82;
+  letter-spacing: -0.035em;
+  color: #e7dfd2;
+  opacity: 0.84;
+  transform-origin: center center;
   will-change: transform;
 }
 
-.works-canvas__card-shell {
-  position: absolute;
-  width: var(--works-card-width);
-  height: var(--works-card-height);
-  transform-origin: center center;
+.works-left-stage {
+  background-color: #f6f4f0;
+  background-image:
+    radial-gradient(
+      circle at 18% 18%,
+      rgba(255, 255, 255, 0.78) 0,
+      rgba(255, 255, 255, 0) 36%
+    ),
+    radial-gradient(
+      circle at 82% 24%,
+      rgba(233, 224, 210, 0.36) 0,
+      rgba(233, 224, 210, 0) 28%
+    ),
+    linear-gradient(135deg, rgba(29, 30, 24, 0.03) 0%, rgba(29, 30, 24, 0) 42%),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.24) 0,
+      rgba(255, 255, 255, 0.24) 1px,
+      transparent 1px,
+      transparent 24px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(29, 30, 24, 0.018) 0,
+      rgba(29, 30, 24, 0.018) 1px,
+      transparent 1px,
+      transparent 24px
+    );
+  background-position: center center;
+  background-size:
+    auto,
+    auto,
+    auto,
+    24px 24px,
+    24px 24px;
 }
 
-.works-canvas__card-shell:hover {
+/* Three.js canvas — transparent bg so stage shows through */
+.works-card-scene {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+}
+
+.works-card-shadow {
+  position: absolute;
+  border-radius: 14px;
+  background: rgba(20, 18, 14, 0.42);
+  filter: blur(28px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.works-three-canvas {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   z-index: 2;
 }
 
-.works-canvas__card {
-  width: var(--works-card-width);
-  height: var(--works-card-height);
-  min-height: var(--works-card-height);
-  border-radius: 18px;
-  padding: 1px;
-  background: rgb(47 58 74 / 0.08);
-  box-shadow: 0 10px 28px rgb(47 58 74 / 0.04);
-  filter: drop-shadow(0 20px 30px rgb(0 0 0 / 0.2));
-  transform: scale(var(--card-scale, 1));
-  transform-origin: center center;
-  will-change: transform, filter;
-  transition:
-    transform 280ms ease,
-    filter 280ms ease,
-    box-shadow 280ms ease,
-    border-color 280ms ease;
+.watermark-outline {
+  color: transparent;
+  -webkit-text-stroke: 2px rgba(17, 17, 17, 0.95);
 }
 
-.works-canvas__card:hover {
-  transform: scale(calc(var(--card-scale, 1) + 0.015));
-  filter: drop-shadow(0 24px 36px rgb(0 0 0 / 0.24));
-  box-shadow: 0 16px 32px rgb(47 58 74 / 0.06);
-}
-
-.works-canvas__card-surface {
-  display: grid;
-  height: 100%;
-  min-height: 0;
-  grid-template-rows: minmax(0, 1fr) auto;
-  gap: 0.78rem;
-  overflow: hidden;
-  border-radius: inherit;
-  padding: 0.8rem 0.8rem 0.95rem;
-  background: rgb(255 255 255 / 0.72);
-}
-
-.works-canvas__card-image-shell {
-  min-height: 0;
-  overflow: hidden;
-  border-radius: 14px;
-  background: rgb(255 255 255 / 0.36);
-  box-shadow:
-    inset 0 0 0 1px rgb(255 255 255 / 0.28),
-    0 10px 20px rgb(47 58 74 / 0.08);
-}
-
-.works-canvas__card-image {
+.works-title-wordmark {
   display: block;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 520ms ease;
+  white-space: nowrap;
+  letter-spacing: 0.015em;
+  transform: translateY(0.3125rem) scaleX(0.72) scaleY(1);
+  transform-origin: top left;
+  will-change: transform;
 }
 
-.works-canvas__card:hover .works-canvas__card-image {
-  transform: scale(1.035);
-}
-
-.works-canvas__card-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 0.34rem;
-  padding-inline: 0.08rem;
-}
-
-.works-canvas__card-meta {
-  margin: 0;
-  font-family: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
-  font-size: 0.66rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: rgb(47 58 74 / 0.45);
-}
-
-.works-canvas__card-title {
-  margin: 0;
-  font-family: 'Cormorant Garamond', serif;
-  font-size: clamp(1.56rem, 2vw, 1.92rem);
-  font-weight: 600;
-  line-height: 0.94;
-  letter-spacing: -0.03em;
-  color: #2f3a4a;
-}
-
-.works-canvas__card--blue .works-canvas__card-surface {
-  background: linear-gradient(180deg, rgb(244 249 252 / 0.96), rgb(233 242 248 / 0.82));
-}
-
-.works-canvas__card--sand .works-canvas__card-surface {
-  background: linear-gradient(180deg, rgb(251 247 239 / 0.96), rgb(244 235 220 / 0.84));
-}
-
-.works-canvas__card--green .works-canvas__card-surface {
-  background: linear-gradient(180deg, rgb(243 250 246 / 0.96), rgb(230 241 234 / 0.84));
-}
-
-.works-canvas__card--slate .works-canvas__card-surface {
-  background: linear-gradient(180deg, rgb(246 247 249 / 0.96), rgb(234 237 241 / 0.84));
-}
-
-@media (min-width: 900px) {
-  .works-archive__panel {
-    grid-template-columns: minmax(0, 1.24fr) minmax(18rem, 0.76fr);
-    align-items: start;
-    min-height: calc(35rem - 60px);
-    padding: clamp(1.25rem, 2.5vw, 1.8rem);
+@media (max-width: 767px) {
+  .works-title-wordmark {
+    transform: translateY(0.1875rem) scaleX(0.7) scaleY(1);
   }
+}
 
-  .works-archive__meta {
-    align-self: stretch;
-    padding-top: 0;
-    padding-left: clamp(0.75rem, 1.8vw, 1.6rem);
+.cad-hook-tl {
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  width: 10px;
+  height: 10px;
+  border-top: 1px solid rgba(29, 30, 24, 0.4);
+  border-left: 1px solid rgba(29, 30, 24, 0.4);
+}
+.cad-hook-tr {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 10px;
+  height: 10px;
+  border-top: 1px solid rgba(29, 30, 24, 0.4);
+  border-right: 1px solid rgba(29, 30, 24, 0.4);
+}
+.cad-hook-bl {
+  position: absolute;
+  bottom: -6px;
+  left: -6px;
+  width: 10px;
+  height: 10px;
+  border-bottom: 1px solid rgba(29, 30, 24, 0.4);
+  border-left: 1px solid rgba(29, 30, 24, 0.4);
+}
+.cad-hook-br {
+  position: absolute;
+  bottom: -6px;
+  right: -6px;
+  width: 10px;
+  height: 10px;
+  border-bottom: 1px solid rgba(29, 30, 24, 0.4);
+  border-right: 1px solid rgba(29, 30, 24, 0.4);
+}
+
+.tech-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid rgba(29, 30, 24, 0.15);
+  border-radius: 999px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgba(29, 30, 24, 0.85);
+  background-color: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.tech-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  border: 1px solid rgba(29, 30, 24, 0.5);
+}
+
+@media (min-width: 768px) {
+  .blueprint-frame {
+    --blueprint-frame-inset: 1.5rem;
   }
+  .blueprint-frame::before {
+    inset: var(--blueprint-frame-inset);
+  }
+}
 
-  .works-archive__title {
-    max-width: 14ch;
+@media (min-width: 1024px) {
+  .blueprint-frame {
+    --blueprint-frame-inset: 2rem;
+  }
+  .blueprint-frame::before {
+    inset: var(--blueprint-frame-inset);
   }
 }
 </style>

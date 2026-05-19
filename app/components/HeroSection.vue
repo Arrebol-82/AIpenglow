@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import heroImage from '~/assets/images/Hero_image.jpg'
+import { gsap } from 'gsap'
 
 type Raindrop = {
   x: number
@@ -11,18 +11,60 @@ type Raindrop = {
 
 const sectionRef = ref<HTMLElement | null>(null)
 const rainCanvasRef = ref<HTMLCanvasElement | null>(null)
+const heroTitleRef = ref<HTMLElement | null>(null)
+const heroTitleStillRef = ref<HTMLElement | null>(null)
+const heroTitleBecomingRef = ref<HTMLElement | null>(null)
+const heroSubtitleRef = ref<HTMLElement | null>(null)
+const heroSubtitleWrappedMeasureRef = ref<HTMLElement | null>(null)
+const heroIntroComplete = useState('hero-intro-complete', () => false)
+const navbarIntroComplete = useState('navbar-intro-complete', () => false)
+const heroBackgroundImage = "url('/images/Hero_image.jpg')"
 const parallaxStyle = ref({
+  '--hero-background-image': heroBackgroundImage,
   '--hero-parallax-x': '0px',
-  '--hero-parallax-y': '0px',
-  '--hero-overlay-shift-x': '0px',
-  '--hero-overlay-shift-y': '0px'
+  '--hero-parallax-y': '0px'
 })
 
 let animationFrameId = 0
 let resizeObserver: ResizeObserver | null = null
+let heroTitleAnimationContext: gsap.Context | null = null
 let drops: Raindrop[] = []
 let viewportWidth = 0
 let viewportHeight = 0
+let isHeroTitleDocked = false
+
+const heroSubtitleText = 'Tracing the soul in quiet lines, beneath the Ghibli breeze.'
+const heroSubtitleWords = computed(() =>
+  heroSubtitleText.split(' ').map((word, wordIndex) => ({
+    id: `hero-subtitle-word-${wordIndex}`,
+    word
+  }))
+)
+const heroSubtitleLeadWords = computed(() => heroSubtitleWords.value.slice(0, -2))
+const heroSubtitleTailWords = computed(() => heroSubtitleWords.value.slice(-2))
+
+const prefersReducedMotion = () =>
+  import.meta.client && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+const updateParallax = (pointerX = window.innerWidth / 2, pointerY = window.innerHeight / 2) => {
+  const xRatio = pointerX / window.innerWidth - 0.5
+  const yRatio = pointerY / window.innerHeight - 0.5
+  const scrollShift = Math.min(window.scrollY * 0.016, 7)
+
+  parallaxStyle.value = {
+    '--hero-background-image': heroBackgroundImage,
+    '--hero-parallax-x': `${(xRatio * 7).toFixed(2)}px`,
+    '--hero-parallax-y': `${(yRatio * 5 - scrollShift).toFixed(2)}px`
+  }
+}
+
+const handlePointerMove = (event: MouseEvent) => {
+  updateParallax(event.clientX, event.clientY)
+}
+
+const handleScroll = () => {
+  updateParallax()
+}
 
 const createRaindrop = (canvasWidth: number, canvasHeight: number): Raindrop => ({
   x: Math.random() * canvasWidth,
@@ -98,31 +140,265 @@ const renderRain = () => {
   animationFrameId = window.requestAnimationFrame(renderRain)
 }
 
-const updateParallax = (pointerX = window.innerWidth / 2, pointerY = window.innerHeight / 2) => {
-  const xRatio = pointerX / window.innerWidth - 0.5
-  const yRatio = pointerY / window.innerHeight - 0.5
-  const scrollShift = Math.min(window.scrollY * 0.018, 8)
+const getElementFontSize = (element: HTMLElement | null, fallback: number) => {
+  if (!element) {
+    return fallback
+  }
 
-  parallaxStyle.value = {
-    '--hero-parallax-x': `${(xRatio * 8).toFixed(2)}px`,
-    '--hero-parallax-y': `${(yRatio * 6 - scrollShift).toFixed(2)}px`,
-    '--hero-overlay-shift-x': `${(xRatio * 4).toFixed(2)}px`,
-    '--hero-overlay-shift-y': `${(yRatio * 5 - scrollShift * 0.35).toFixed(2)}px`
+  const fontSize = Number.parseFloat(window.getComputedStyle(element).fontSize)
+  return Number.isFinite(fontSize) ? fontSize : fallback
+}
+
+const getUntransformedRect = (element: HTMLElement) => {
+  const previousTransform = element.style.transform
+  const previousTransformOrigin = element.style.transformOrigin
+
+  gsap.set(element, {
+    x: 0,
+    y: 0,
+    scale: 1,
+    scaleX: 1,
+    scaleY: 1,
+    transformOrigin: 'top left'
+  })
+
+  const rect = element.getBoundingClientRect()
+
+  element.style.transform = previousTransform
+  element.style.transformOrigin = previousTransformOrigin
+
+  return rect
+}
+
+const getHeroSubtitleWordShells = (root: HTMLElement | null = heroSubtitleRef.value) =>
+  root
+    ? Array.from(root.querySelectorAll<HTMLElement>('.hero-subtitle-word-shell'))
+    : []
+
+const getHeroSubtitleWordDockOffsets = () => {
+  if (!heroSubtitleRef.value || !heroSubtitleWrappedMeasureRef.value) {
+    return []
+  }
+
+  const liveWordShells = getHeroSubtitleWordShells(heroSubtitleRef.value)
+  const measuredWordPositions = new Map(
+    getHeroSubtitleWordShells(heroSubtitleWrappedMeasureRef.value).map((shell) => [
+      shell.dataset.wordId ?? '',
+      {
+        left: shell.offsetLeft,
+        top: shell.offsetTop
+      }
+    ] as const)
+  )
+
+  return liveWordShells.map((shell) => {
+    const wordId = shell.dataset.wordId ?? ''
+    const measuredPosition = measuredWordPositions.get(wordId)
+
+    return {
+      shell,
+      x: measuredPosition ? measuredPosition.left - shell.offsetLeft : 0,
+      y: measuredPosition ? measuredPosition.top - shell.offsetTop : 0
+    }
+  })
+}
+
+const getHeroDockMetrics = () => {
+  if (!sectionRef.value || !heroTitleRef.value || !heroTitleStillRef.value || !heroSubtitleRef.value) {
+    return null
+  }
+
+  const isMobile = window.innerWidth < 768
+  const isDesktopWide = window.innerWidth >= 1280
+  const titleRect = getUntransformedRect(heroTitleRef.value)
+  const subtitleCurrentRect = getUntransformedRect(heroSubtitleRef.value)
+  const subtitleMeasureRect = heroSubtitleWrappedMeasureRef.value?.getBoundingClientRect() ?? subtitleCurrentRect
+  const targetStillFontSize = isMobile ? 84 : 145
+  const targetSubtitleFontSize = isMobile ? 18 : 26
+  const stillFontSize = getElementFontSize(heroTitleStillRef.value, targetStillFontSize)
+  const subtitleFontSize = getElementFontSize(heroSubtitleWrappedMeasureRef.value ?? heroSubtitleRef.value, targetSubtitleFontSize)
+  const titleScale = targetStillFontSize / stillFontSize
+  const subtitleScale = targetSubtitleFontSize / subtitleFontSize
+  const sideInset = isMobile ? 24 : (isDesktopWide ? 60 : 48)
+  const bottomInset = isMobile ? 80 : 140
+  const topFloor = isMobile ? 96 : 120
+  const blockGap = isMobile ? 16 : 20
+  const dockOffset = 20
+  const titleWidth = titleRect.width * titleScale
+  const titleHeight = titleRect.height * titleScale
+  const subtitleWidth = subtitleMeasureRect.width * subtitleScale
+  const subtitleHeight = subtitleMeasureRect.height * subtitleScale
+  const blockHeight = titleHeight + blockGap + subtitleHeight
+  const sectionRect = sectionRef.value.getBoundingClientRect()
+  const sectionHeight = sectionRef.value.offsetHeight
+  const blockTop = Math.max(topFloor, sectionHeight - bottomInset - blockHeight - dockOffset)
+  const blockRight = window.innerWidth - sideInset - dockOffset
+  const titleTargetLeft = Math.max(sideInset, blockRight - titleWidth)
+  const subtitleTargetLeft = Math.max(sideInset, blockRight - subtitleWidth)
+  const subtitleTargetTop = blockTop + titleHeight + blockGap
+
+  return {
+    titleX: titleTargetLeft - titleRect.left,
+    titleY: blockTop - (titleRect.top - sectionRect.top),
+    titleScale,
+    subtitleX: subtitleTargetLeft - subtitleCurrentRect.left,
+    subtitleY: subtitleTargetTop - (subtitleCurrentRect.top - sectionRect.top),
+    subtitleScale
   }
 }
 
-const handlePointerMove = (event: MouseEvent) => {
-  updateParallax(event.clientX, event.clientY)
+const moveHeroTitleToDock = (immediate = false) => {
+  if (!heroTitleRef.value || !heroSubtitleRef.value) {
+    return
+  }
+
+  const shouldDockImmediately = immediate || prefersReducedMotion()
+  const subtitleWordOffsets = getHeroSubtitleWordDockOffsets()
+  const dockMetrics = getHeroDockMetrics()
+
+  if (!dockMetrics) {
+    return
+  }
+
+  const subtitleWordTargets = subtitleWordOffsets.map(({ shell, x, y }) => ({
+    shell,
+    x: dockMetrics.subtitleX + x * dockMetrics.subtitleScale,
+    y: dockMetrics.subtitleY + y * dockMetrics.subtitleScale
+  }))
+  const subtitleWordDuration = 1.5
+  const subtitleWordStagger = 0.065
+  const titleStartDelay = subtitleWordDuration * 0.5
+
+  isHeroTitleDocked = true
+  gsap.killTweensOf([
+    heroTitleRef.value,
+    heroSubtitleRef.value,
+    ...subtitleWordTargets.map(({ shell }) => shell)
+  ])
+
+  if (shouldDockImmediately) {
+    gsap.set(heroSubtitleRef.value, {
+      x: 0,
+      y: 0,
+      scale: 1,
+      transformOrigin: 'top left'
+    })
+    gsap.set(heroTitleRef.value, {
+      x: dockMetrics.titleX,
+      y: dockMetrics.titleY,
+      scale: dockMetrics.titleScale,
+      transformOrigin: 'top left'
+    })
+    for (const { shell, x, y } of subtitleWordTargets) {
+      gsap.set(shell, {
+        x,
+        y,
+        scale: dockMetrics.subtitleScale,
+        transformOrigin: 'top left'
+      })
+    }
+    return
+  }
+
+  gsap.set(heroSubtitleRef.value, {
+    x: 0,
+    y: 0,
+    scale: 1,
+    transformOrigin: 'top left'
+  })
+
+  gsap.to(heroTitleRef.value, {
+    x: dockMetrics.titleX,
+    y: dockMetrics.titleY,
+    scale: dockMetrics.titleScale,
+    transformOrigin: 'top left',
+    duration: 1.08,
+    delay: titleStartDelay,
+    ease: 'expo.inOut',
+    force3D: true
+  })
+
+  gsap.to(subtitleWordTargets.map(({ shell }) => shell), {
+    x: (index) => subtitleWordTargets[index]?.x ?? 0,
+    y: (index) => subtitleWordTargets[index]?.y ?? 0,
+    scale: dockMetrics.subtitleScale,
+    transformOrigin: 'top left',
+    duration: subtitleWordDuration,
+    stagger: {
+      each: subtitleWordStagger,
+      from: 'end'
+    },
+    ease: 'expo.inOut',
+    force3D: true,
+    overwrite: 'auto'
+  })
 }
 
-const handleScroll = () => {
-  updateParallax()
+const setupHeroTitleAnimation = () => {
+  if (
+    !sectionRef.value
+    || !heroTitleStillRef.value
+    || !heroTitleBecomingRef.value
+    || !heroSubtitleRef.value
+    || prefersReducedMotion()
+  ) {
+    heroIntroComplete.value = true
+    return
+  }
+
+  heroTitleAnimationContext = gsap.context(() => {
+    const subtitleWords = gsap.utils.toArray<HTMLElement>('.hero-subtitle-word', heroSubtitleRef.value)
+    const timeline = gsap.timeline({
+      defaults: {
+        ease: 'power4.out'
+      }
+    })
+
+    timeline.from(heroTitleStillRef.value, {
+      y: 42,
+      autoAlpha: 0,
+      scale: 1.045,
+      filter: 'blur(16px)',
+      duration: 1.18,
+      ease: 'expo.out',
+      clearProps: 'filter,opacity,transform'
+    }, 0)
+
+    timeline.from(heroTitleBecomingRef.value, {
+      y: 54,
+      x: 20,
+      autoAlpha: 0,
+      scale: 1.02,
+      rotation: 2,
+      filter: 'blur(12px)',
+      duration: 1.28,
+      ease: 'expo.out',
+      clearProps: 'filter,opacity,transform'
+    }, 0.08)
+
+    timeline.call(() => {
+      heroIntroComplete.value = true
+    }, undefined, 1.4)
+
+    timeline.from(subtitleWords, {
+      yPercent: 125,
+      autoAlpha: 0,
+      duration: 0.78,
+      stagger: 0.06,
+      ease: 'power3.out',
+      clearProps: 'opacity,transform'
+    }, 0.32)
+  }, sectionRef.value)
 }
 
 onMounted(() => {
+  heroIntroComplete.value = false
+  navbarIntroComplete.value = false
+  isHeroTitleDocked = false
   resizeCanvas()
   updateParallax()
   renderRain()
+  setupHeroTitleAnimation()
 
   resizeObserver = new ResizeObserver(() => {
     resizeCanvas()
@@ -132,49 +408,105 @@ onMounted(() => {
     resizeObserver.observe(sectionRef.value)
   }
 
-  window.addEventListener('resize', resizeCanvas)
+  window.addEventListener('resize', handleResize)
   window.addEventListener('mousemove', handlePointerMove, { passive: true })
   window.addEventListener('scroll', handleScroll, { passive: true })
+})
+
+watch(navbarIntroComplete, async (isComplete) => {
+  if (!isComplete) {
+    return
+  }
+
+  await nextTick()
+  moveHeroTitleToDock()
 })
 
 onBeforeUnmount(() => {
   window.cancelAnimationFrame(animationFrameId)
   resizeObserver?.disconnect()
-  window.removeEventListener('resize', resizeCanvas)
+  heroTitleAnimationContext?.revert()
+  heroTitleAnimationContext = null
+  gsap.killTweensOf([heroTitleRef.value, heroSubtitleRef.value, ...getHeroSubtitleWordShells()])
+  window.removeEventListener('resize', handleResize)
   window.removeEventListener('mousemove', handlePointerMove)
   window.removeEventListener('scroll', handleScroll)
 })
+
+const handleResize = () => {
+  resizeCanvas()
+
+  if (isHeroTitleDocked && navbarIntroComplete.value) {
+    moveHeroTitleToDock(true)
+  }
+}
 </script>
 
 <template>
   <section
     ref="sectionRef"
-    class="hero-section relative flex min-h-screen w-full flex-col items-end justify-end overflow-hidden px-6 pb-20 text-right md:px-12 md:pb-24 xl:px-[60px]"
+    class="hero-section relative left-1/2 flex min-h-screen w-screen max-w-none -translate-x-1/2 flex-col items-center justify-center overflow-hidden px-6 pb-20 pt-28 text-center md:px-12 md:pb-24 md:pt-32 xl:px-[60px]"
     :style="parallaxStyle"
   >
     <div class="hero-image-stage absolute inset-0 z-0">
-      <img
+      <NuxtImg
         alt="painterly forest landscape at dusk with layered mist and soft cinematic light"
         class="hero-image"
         data-alt="Dreamy painterly forest scene with mist, rainfall, and soft atmospheric light in a Ghibli-inspired anime background style"
-        :src="heroImage"
-      >
-      <div class="hero-light hero-light--glow"></div>
-      <div class="hero-light hero-light--lift"></div>
-      <div class="hero-light hero-light--mist"></div>
-      <div class="hero-image-vignette"></div>
+        loading="eager"
+        src="/images/Hero_image.jpg"
+      />
       <canvas ref="rainCanvasRef" class="hero-rain-layer" aria-hidden="true"></canvas>
     </div>
-    <div class="z-10 max-w-4xl">
-      <h1
-        class="hero-title mb-5 font-headline text-7xl font-bold leading-none tracking-tighter md:text-[8.5rem]"
-      >
-        <span class="font-medium italic text-primary">Still</span> Becoming
-      </h1>
+    <div class="hero-copy z-10">
+      <span class="hero-title-shell">
+        <h1
+          ref="heroTitleRef"
+          class="hero-title"
+        >
+          <span
+            ref="heroTitleStillRef"
+            class="hero-title-part hero-title-part--serif"
+          >
+            Still
+          </span>
+          <span
+            ref="heroTitleBecomingRef"
+            class="hero-title-part hero-title-part--contrast"
+          >
+            Becoming
+          </span>
+        </h1>
+      </span>
       <p
-        class="hero-subtitle ml-auto max-w-2xl font-body text-lg font-light italic tracking-tight md:text-[1.75rem]"
+        ref="heroSubtitleRef"
+        class="hero-subtitle font-body text-lg font-light italic tracking-tight md:text-[1.75rem]"
       >
-        Tracing the soul in quiet lines, beneath the Ghibli breeze.
+        <template v-for="word in heroSubtitleWords" :key="word.id">
+          <span class="hero-subtitle-word-shell" :data-word-id="word.id">
+            <span class="hero-subtitle-word">{{ word.word }}</span>
+          </span>
+        </template>
+      </p>
+      <p
+        ref="heroSubtitleWrappedMeasureRef"
+        aria-hidden="true"
+        class="hero-subtitle hero-subtitle--wrapped hero-subtitle--measure font-body text-lg font-light italic tracking-tight md:text-[1.75rem]"
+      >
+        <span class="hero-subtitle-line hero-subtitle-line--lead">
+          <template v-for="word in heroSubtitleLeadWords" :key="`measure-${word.id}`">
+            <span class="hero-subtitle-word-shell" :data-word-id="word.id">
+              <span class="hero-subtitle-word">{{ word.word }}</span>
+            </span>
+          </template>
+        </span>
+        <span class="hero-subtitle-line hero-subtitle-line--tail">
+          <template v-for="word in heroSubtitleTailWords" :key="`measure-tail-${word.id}`">
+            <span class="hero-subtitle-word-shell" :data-word-id="word.id">
+              <span class="hero-subtitle-word">{{ word.word }}</span>
+            </span>
+          </template>
+        </span>
       </p>
     </div>
     <div class="hero-scroll-cue absolute bottom-10 left-6 z-10 text-on-background md:bottom-12 md:left-12 xl:left-[60px]">
@@ -186,6 +518,14 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+@font-face {
+  font-family: 'Golden Plains Demo';
+  src: url('~/assets/fonts/Golden Plains - Demo.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 .hero-section {
   background: #e9e1d5;
   isolation: isolate;
@@ -195,75 +535,36 @@ onBeforeUnmount(() => {
   position: absolute;
   inset: 0;
   overflow: hidden;
+  background: #e9e1d5 var(--hero-background-image) center 62% / cover no-repeat;
+  --hero-cover-parallax-buffer: clamp(3.5rem, 6vh, 4.75rem);
 }
 
 .hero-image {
   position: absolute;
-  inset: -10px;
-  width: calc(100% + 20px);
-  height: calc(100% + 20px);
+  top: calc(var(--hero-cover-parallax-buffer) * -1);
+  right: -6px;
+  bottom: calc(var(--hero-cover-parallax-buffer) * -1);
+  left: -6px;
+  width: calc(100% + 12px);
+  height: calc(100% + var(--hero-cover-parallax-buffer) * 2);
   max-width: none;
   display: block;
   object-fit: cover;
-  transform: translate3d(var(--hero-parallax-x), var(--hero-parallax-y), 0) scale(1.01);
+  transform: translate3d(
+    var(--hero-parallax-x),
+    calc(var(--hero-parallax-y) + var(--hero-cover-parallax-y, 0px)),
+    0
+  ) scale(1.004);
   transform-origin: center;
-  filter: brightness(0.9) saturate(1.02);
-  animation: hero-breathing 9s ease-in-out infinite;
   transition: transform 280ms ease-out;
 }
 
-.hero-image-vignette {
-  position: absolute;
-  inset: -8%;
-  background:
-    radial-gradient(circle at 24% 22%, rgb(255 255 255 / 0.16), transparent 32%),
-    linear-gradient(180deg, rgb(16 24 20 / 0.06) 0%, rgb(16 24 20 / 0.26) 100%);
-  transform: translate3d(var(--hero-overlay-shift-x), var(--hero-overlay-shift-y), 0);
-  transition: transform 320ms ease-out;
-  pointer-events: none;
-}
-
-.hero-light {
-  position: absolute;
-  pointer-events: none;
-  mix-blend-mode: screen;
-}
-
-.hero-light--glow {
-  top: 7%;
-  right: 5%;
-  width: min(34vw, 440px);
-  height: min(48vh, 360px);
-  background: radial-gradient(circle at 42% 40%, rgb(255 245 220 / 0.34), rgb(255 226 169 / 0.12) 42%, transparent 72%);
-  filter: blur(18px);
-  opacity: 0.9;
-  transform: translate3d(calc(var(--hero-overlay-shift-x) * 0.7), calc(var(--hero-overlay-shift-y) * 0.7), 0);
-  animation: hero-glow-drift 12s ease-in-out infinite;
-}
-
-.hero-light--lift {
-  inset: 0;
-  background:
-    radial-gradient(circle at 74% 26%, rgb(255 244 214 / 0.18), transparent 22%),
-    radial-gradient(circle at 70% 42%, rgb(255 247 227 / 0.12), transparent 26%);
-  mix-blend-mode: screen;
-  opacity: 0.72;
-  transform: translate3d(calc(var(--hero-overlay-shift-x) * 0.45), calc(var(--hero-overlay-shift-y) * 0.45), 0);
-  animation: hero-lift-breathe 11s ease-in-out infinite;
-}
-
-.hero-light--mist {
-  top: 22%;
-  right: 6%;
-  width: min(34vw, 360px);
-  height: min(28vh, 210px);
-  background:
-    linear-gradient(110deg, transparent 0%, rgb(255 252 243 / 0.06) 28%, rgb(255 249 234 / 0.14) 48%, rgb(247 242 232 / 0.08) 64%, transparent 100%),
-    radial-gradient(circle at 58% 48%, rgb(255 252 244 / 0.12), transparent 62%);
-  filter: blur(26px);
-  opacity: 0.62;
-  transform: translate3d(calc(var(--hero-overlay-shift-x) * 0.9), calc(var(--hero-overlay-shift-y) * 0.9), 0);
-  animation: hero-mist-stream 18s ease-in-out infinite;
+@media (max-width: 767px) {
+  .hero-image {
+    right: -4px;
+    left: -4px;
+    width: calc(100% + 8px);
+  }
 }
 
 .hero-rain-layer {
@@ -284,90 +585,164 @@ onBeforeUnmount(() => {
 }
 
 .hero-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: center;
+  column-gap: clamp(1rem, 1.9vw, 1.8rem);
+  row-gap: 0.22rem;
   color: #e8ddd0;
+  line-height: 0.84;
+  will-change: transform, filter, opacity;
+}
+
+.hero-title-shell {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  padding: 0.38em 0.22em 0.78em;
+  margin: -0.12em -0.08em -0.2em;
+  vertical-align: top;
+}
+
+.hero-copy {
+  width: min(100%, 85.75rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-inline: auto;
+  margin-top: clamp(0.9rem, 5.8vh, 3.8rem);
+  text-align: center;
+}
+
+.hero-title-part {
+  display: inline-block;
+  will-change: transform, filter, opacity;
+}
+
+.hero-title-part--serif {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(7.95rem, 16.2vw, 14.85rem);
+  font-weight: 600;
+  letter-spacing: -0.06em;
+}
+
+.hero-title-part--contrast {
+  font-family: 'Golden Plains Demo', cursive;
+  font-size: clamp(7.25rem, 15.2vw, 14rem);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  margin-left: clamp(0.68rem, 1.35vw, 1.32rem);
+  transform: translate(0.08em, -0.02em);
 }
 
 .hero-subtitle {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  width: auto;
+  max-width: none;
+  margin-inline: auto;
+  margin-top: -0.24rem;
   color: rgb(232 221 208 / 0.78);
+  font-family: 'Inter', sans-serif;
+  letter-spacing: 0.012em;
+  line-height: 1.3;
+  white-space: nowrap;
+  transform: none;
 }
 
-@keyframes hero-breathing {
-  0%,
-  100% {
-    filter: brightness(0.88) saturate(1.02);
-  }
-
-  50% {
-    filter: brightness(1.04) saturate(1.08);
-  }
+.hero-subtitle--wrapped {
+  flex-direction: column;
+  align-items: stretch;
+  width: fit-content;
+  row-gap: 0.02em;
+  white-space: normal;
 }
 
-@keyframes hero-glow-drift {
-  0%,
-  100% {
-    opacity: 0.82;
-  }
-
-  50% {
-    opacity: 1;
-  }
+.hero-subtitle--measure {
+  position: fixed;
+  top: -10000px;
+  left: -10000px;
+  margin: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: none !important;
 }
 
-@keyframes hero-lift-breathe {
-  0%,
-  100% {
-    opacity: 0.54;
-    transform: translate3d(calc(var(--hero-overlay-shift-x) * 0.35), calc(var(--hero-overlay-shift-y) * 0.35), 0);
-  }
-
-  50% {
-    opacity: 0.84;
-    transform: translate3d(calc(var(--hero-overlay-shift-x) * 0.55), calc(var(--hero-overlay-shift-y) * 0.55), 0);
-  }
+.hero-subtitle-line {
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
 }
 
-@keyframes hero-mist-stream {
-  0%,
-  100% {
-    opacity: 0.42;
-    transform: translate3d(calc(var(--hero-overlay-shift-x) * 0.75 - 12px), calc(var(--hero-overlay-shift-y) * 0.8), 0) rotate(-4deg);
-  }
+.hero-subtitle-line--lead {
+  justify-content: center;
+}
 
-  50% {
-    opacity: 0.68;
-    transform: translate3d(calc(var(--hero-overlay-shift-x) * 1.1 + 16px), calc(var(--hero-overlay-shift-y) * 0.95 - 6px), 0) rotate(2deg);
-  }
+.hero-subtitle-line--tail {
+  justify-content: flex-end;
+}
+
+.hero-subtitle-word-shell {
+  display: inline-block;
+  overflow: hidden;
+  padding: 0.04em 0.14em 0.14em 0.06em;
+  vertical-align: top;
+}
+
+.hero-subtitle-word {
+  display: inline-block;
+  will-change: transform, opacity;
 }
 
 @media (max-width: 767px) {
-  .hero-image {
-    inset: -8px;
-    width: calc(100% + 16px);
-    height: calc(100% + 16px);
-  }
-
   .hero-rain-layer {
     opacity: 0.58;
   }
 
-  .hero-light--glow {
-    top: 10%;
-    right: -6%;
-    width: 220px;
-    height: 220px;
-    opacity: 0.72;
+  .hero-copy {
+    margin-top: clamp(0.65rem, 4.6vh, 2.1rem);
   }
 
-  .hero-light--lift {
-    opacity: 0.58;
+  .hero-title {
+    column-gap: 0.52rem;
+    row-gap: 0.15rem;
+    line-height: 0.88;
   }
 
-  .hero-light--mist {
-    top: 24%;
-    right: 2%;
-    width: 220px;
-    height: 120px;
-    opacity: 0.46;
+  .hero-title-shell {
+    padding: 0.32em 0.14em 0.66em;
+    margin: -0.1em -0.04em -0.16em;
+  }
+
+  .hero-title-part--serif {
+    font-size: clamp(4.6rem, 20vw, 6.3rem);
+  }
+
+  .hero-title-part--contrast {
+    font-size: clamp(4rem, 18vw, 5.6rem);
+    margin-left: 0.34rem;
+    transform: translate(0.05em, -0.01em);
+  }
+
+  .hero-subtitle {
+    display: flex;
+    margin-top: 0;
+    width: min(100%, 24rem);
+    justify-content: center;
+    white-space: normal;
+    transform: none;
+  }
+
+  .hero-subtitle--wrapped {
+    width: min(100%, 24rem);
+  }
+
+  .hero-subtitle:not(.hero-subtitle--wrapped):not(.hero-subtitle--measure) {
+    flex-wrap: wrap;
+    transform: none;
   }
 }
 </style>

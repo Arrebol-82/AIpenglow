@@ -16,6 +16,13 @@ body {
   background: #f6f1e7;
   color: #2f3a4a;
   scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
 }
 
 body {
