@@ -1,12 +1,19 @@
 <template>
   <section
     ref="sectionRef"
-    class="relative left-1/2 flex min-h-screen w-screen max-w-none -translate-x-1/2 flex-col overflow-hidden bg-[#F3EFE7] font-sans text-[#1D1E18]"
+    class="relative z-10 left-1/2 flex min-h-screen w-screen max-w-none -translate-x-1/2 flex-col overflow-hidden bg-[#F3EFE7] font-sans text-[#1D1E18]"
   >
-    <div class="archive-grid pointer-events-none absolute inset-0 opacity-60"></div>
+    <div
+      class="archive-grid pointer-events-none absolute inset-0 opacity-60"
+    ></div>
 
-    <div class="archive-band relative z-10 flex h-[3.25rem] items-center overflow-hidden border-b border-[#1D1E18]/15 bg-[#F3EFE7] md:h-[3.5rem]">
-      <div ref="topTrackRef" class="archive-band-track font-mono text-[20px] tracking-[0.2em] text-[#1D1E18]/40">
+    <div
+      class="archive-band relative z-10 flex h-[3.25rem] items-center overflow-hidden border-b border-[#1D1E18]/15 bg-[#F3EFE7] md:h-[3.5rem]"
+    >
+      <div
+        ref="topTrackRef"
+        class="archive-band-track font-mono text-[20px] tracking-[0.2em] text-[#1D1E18]/40"
+      >
         <span
           v-for="copy in marqueeCopies"
           :key="`top-${copy}`"
@@ -18,7 +25,9 @@
     </div>
 
     <div class="relative z-10 flex h-full w-full flex-1">
-      <div class="hidden w-24 items-center justify-center border-r border-[#1D1E18]/15 bg-[#F3EFE7] py-12 md:flex lg:w-40">
+      <div
+        class="hidden w-24 items-center justify-center border-r border-[#1D1E18]/15 bg-[#F3EFE7] py-12 md:flex lg:w-40"
+      >
         <h2
           ref="watermarkRef"
           class="watermark-outline vertical-text select-none font-serif font-bold text-[6rem] tracking-widest lg:text-[8rem]"
@@ -50,7 +59,9 @@
               class="archive-item-line absolute left-0 top-0 h-px bg-[#1D1E18]/20"
             ></span>
 
-            <h3 class="w-1/2 font-serif text-3xl text-[#111] transition-transform duration-300 group-hover:translate-x-4 md:text-5xl">
+            <h3
+              class="w-1/2 font-serif text-3xl text-[#111] transition-transform duration-300 group-hover:translate-x-4 md:text-5xl"
+            >
               <span class="archive-title inline-flex flex-wrap">
                 <span
                   v-for="(char, charIndex) in splitTitle(project.title)"
@@ -62,11 +73,15 @@
               </span>
             </h3>
 
-            <span class="archive-role w-1/4 text-left font-serif text-lg text-[#1D1E18]/80 md:text-2xl">
+            <span
+              class="archive-role w-1/4 text-left font-serif text-lg text-[#1D1E18]/80 md:text-2xl"
+            >
               {{ project.role }}
             </span>
 
-            <span class="archive-year w-1/4 text-right font-serif text-[1.75rem] text-[#111] md:text-[2.125rem]">
+            <span
+              class="archive-year w-1/4 text-right font-serif text-[1.75rem] text-[#111] md:text-[2.125rem]"
+            >
               {{ project.year }}
             </span>
           </li>
@@ -88,12 +103,17 @@
           :src="activePreviewProject.image"
           :alt="activePreviewProject.title"
           class="block h-[162px] w-full rounded-[0.45rem] object-cover shadow-[0_24px_48px_rgba(29,30,24,0.14)] md:h-[224px]"
-        >
+        />
       </div>
     </div>
 
-    <div class="archive-band relative z-10 flex h-[3.25rem] items-center overflow-hidden border-t border-[#1D1E18]/15 bg-[#F3EFE7] md:h-[3.5rem]">
-      <div ref="bottomTrackRef" class="archive-band-track font-mono text-[20px] tracking-[0.2em] text-[#1D1E18]/40">
+    <div
+      class="archive-band relative z-10 flex h-[3.25rem] items-center overflow-hidden border-t border-[#1D1E18]/15 bg-[#F3EFE7] md:h-[3.5rem]"
+    >
+      <div
+        ref="bottomTrackRef"
+        class="archive-band-track font-mono text-[20px] tracking-[0.2em] text-[#1D1E18]/40"
+      >
         <span
           v-for="copy in marqueeCopies"
           :key="`bottom-${copy}`"
@@ -107,130 +127,178 @@
 </template>
 
 <script setup lang="ts">
-import { gsap } from 'gsap'
+import { gsap } from "gsap";
 
 type ArchiveProject = {
-  title: string
-  role: string
-  year: string
-  image: string
-  note: string
-}
+  title: string;
+  role: string;
+  year: string;
+  image: string;
+  note: string;
+};
 
 const projects: ArchiveProject[] = [
   {
-    title: 'Notion 练习页',
-    role: '页面设计',
-    year: '2022',
-    image: 'https://picsum.photos/id/10/400/400',
-    note: '首版草图',
+    title: "Notion 练习页",
+    role: "页面设计",
+    year: "2022",
+    image: "https://picsum.photos/id/10/400/400",
+    note: "首版草图",
   },
   {
-    title: '个人品牌提案',
-    role: '品牌设计',
-    year: '2021',
-    image: 'https://picsum.photos/id/13/400/400',
-    note: '物料研究',
+    title: "个人品牌提案",
+    role: "品牌设计",
+    year: "2021",
+    image: "https://picsum.photos/id/13/400/400",
+    note: "物料研究",
   },
   {
-    title: '作品集交互练习',
-    role: '界面体验',
-    year: '2020',
-    image: 'https://picsum.photos/id/17/400/400',
-    note: '交互推演',
+    title: "作品集交互练习",
+    role: "界面体验",
+    year: "2020",
+    image: "https://picsum.photos/id/17/400/400",
+    note: "交互推演",
   },
   {
-    title: '展览导视实验',
-    role: '空间装置',
-    year: '2019',
-    image: 'https://picsum.photos/id/29/400/400',
-    note: '空间样张',
+    title: "展览导视实验",
+    role: "空间装置",
+    year: "2019",
+    image: "https://picsum.photos/id/29/400/400",
+    note: "空间样张",
   },
   {
-    title: '片头节奏练习',
-    role: '动效设计',
-    year: '2018',
-    image: 'https://picsum.photos/id/28/400/400',
-    note: '镜头归档',
+    title: "片头节奏练习",
+    role: "动效设计",
+    year: "2018",
+    image: "https://picsum.photos/id/28/400/400",
+    note: "镜头归档",
   },
   {
-    title: '排版海报练习',
-    role: '编辑设计',
-    year: '2017',
-    image: 'https://picsum.photos/id/33/400/400',
-    note: '印刷测试',
+    title: "排版海报练习",
+    role: "编辑设计",
+    year: "2017",
+    image: "https://picsum.photos/id/33/400/400",
+    note: "印刷测试",
   },
-]
+];
 
-const marqueeCopies = Array.from({ length: 6 }, (_, index) => index)
+const marqueeCopies = Array.from({ length: 6 }, (_, index) => index);
 
-const sectionRef = ref<HTMLElement | null>(null)
-const contentRef = ref<HTMLElement | null>(null)
-const watermarkRef = ref<HTMLElement | null>(null)
-const topTrackRef = ref<HTMLElement | null>(null)
-const bottomTrackRef = ref<HTMLElement | null>(null)
-const itemRefs = ref<HTMLElement[]>([])
-const previewRef = ref<HTMLElement | null>(null)
-const previewCardRef = ref<HTMLElement | null>(null)
-const activePreviewIndex = ref<number | null>(null)
+const sectionRef = ref<HTMLElement | null>(null);
+const contentRef = ref<HTMLElement | null>(null);
+const watermarkRef = ref<HTMLElement | null>(null);
+const topTrackRef = ref<HTMLElement | null>(null);
+const bottomTrackRef = ref<HTMLElement | null>(null);
+const itemRefs = ref<HTMLElement[]>([]);
+const previewRef = ref<HTMLElement | null>(null);
+const previewCardRef = ref<HTMLElement | null>(null);
+const activePreviewIndex = ref<number | null>(null);
 const activePreviewProject = computed(() =>
-  activePreviewIndex.value === null ? null : projects[activePreviewIndex.value]
-)
+  activePreviewIndex.value === null ? null : projects[activePreviewIndex.value],
+);
 
-let ctx: gsap.Context | null = null
-let marqueeTweens: gsap.core.Tween[] = []
-let previewVisible = false
+let ctx: gsap.Context | null = null;
+let marqueeTweens: gsap.core.Tween[] = [];
+let previewVisible = false;
 
 const prefersReducedMotion = () =>
-  import.meta.client && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  import.meta.client &&
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const triggerEntrance = () => {
+  if (!sectionRef.value || prefersReducedMotion()) return;
+
+  const root = sectionRef.value;
+
+  if (watermarkRef.value) {
+    gsap.to(watermarkRef.value, {
+      autoAlpha: 1,
+      x: 0,
+      duration: 0.9,
+      ease: "power3.out",
+    });
+  }
+
+  const items = itemRefs.value.filter(Boolean);
+  if (items.length) {
+    const itemLines = Array.from(
+      root.querySelectorAll<HTMLElement>(".archive-item-line"),
+    );
+    const chars = Array.from(root.querySelectorAll<HTMLElement>(".char"));
+    const meta = Array.from(
+      root.querySelectorAll<HTMLElement>(".archive-role, .archive-year"),
+    );
+
+    gsap
+      .timeline()
+      .to(itemLines, {
+        width: "100%",
+        duration: 1.5,
+        ease: "power3.inOut",
+        stagger: 0.1,
+      })
+      .to(
+        chars,
+        { y: "0%", autoAlpha: 1, duration: 0.8, ease: "power2.out", stagger: 0.015 },
+        "-=1",
+      )
+      .to(
+        meta,
+        { autoAlpha: 1, y: 0, duration: 0.6, ease: "power2.out", stagger: 0.08 },
+        "-=0.65",
+      );
+  }
+};
+
+defineExpose({ sectionRef, triggerEntrance });
 
 const splitTitle = (value: string) =>
-  [...value].map((char) => (char === ' ' ? '\u00A0' : char))
+  [...value].map((char) => (char === " " ? "\u00A0" : char));
 
 const setItemRef = (element: Element | null, index: number) => {
   if (element instanceof HTMLElement) {
-    itemRefs.value[index] = element
+    itemRefs.value[index] = element;
   }
-}
+};
 
 const positionPreview = (event: PointerEvent, immediate = false) => {
-  if (!previewRef.value || !contentRef.value) return
+  if (!previewRef.value || !contentRef.value) return;
 
-  const bounds = contentRef.value.getBoundingClientRect()
-  const x = event.clientX - bounds.left
-  const y = event.clientY - bounds.top
+  const bounds = contentRef.value.getBoundingClientRect();
+  const x = event.clientX - bounds.left;
+  const y = event.clientY - bounds.top;
 
   if (immediate) {
-    gsap.set(previewRef.value, { x, y })
-    return
+    gsap.set(previewRef.value, { x, y });
+    return;
   }
 
   gsap.to(previewRef.value, {
     x,
     y,
     duration: 0.6,
-    ease: 'power3.out',
-    overwrite: 'auto',
-  })
-}
+    ease: "power3.out",
+    overwrite: "auto",
+  });
+};
 
 const showPreview = async (event: PointerEvent, index: number) => {
-  const preview = previewRef.value
-  if (!preview) return
+  const preview = previewRef.value;
+  if (!preview) return;
 
-  const isFirstShow = !previewVisible
-  const isSameIndex = activePreviewIndex.value === index
+  const isFirstShow = !previewVisible;
+  const isSameIndex = activePreviewIndex.value === index;
 
-  positionPreview(event, isFirstShow)
+  positionPreview(event, isFirstShow);
 
   if (isFirstShow) {
-    activePreviewIndex.value = index
-    await nextTick()
+    activePreviewIndex.value = index;
+    await nextTick();
 
-    if (!previewCardRef.value) return
+    if (!previewCardRef.value) return;
 
-    gsap.killTweensOf(preview)
-    previewVisible = true
+    gsap.killTweensOf(preview);
+    previewVisible = true;
     gsap.fromTo(
       preview,
       {
@@ -243,9 +311,9 @@ const showPreview = async (event: PointerEvent, index: number) => {
         scale: 1,
         rotate: -3,
         duration: 0.42,
-        ease: 'power3.out',
-      }
-    )
+        ease: "power3.out",
+      },
+    );
     gsap.fromTo(
       previewCardRef.value,
       {
@@ -258,20 +326,20 @@ const showPreview = async (event: PointerEvent, index: number) => {
         scale: 1,
         y: 0,
         duration: 0.4,
-        ease: 'power2.out',
-      }
-    )
-    return
+        ease: "power2.out",
+      },
+    );
+    return;
   }
 
-  if (isSameIndex) return
+  if (isSameIndex) return;
 
-  activePreviewIndex.value = index
-  await nextTick()
+  activePreviewIndex.value = index;
+  await nextTick();
 
-  if (!previewCardRef.value) return
+  if (!previewCardRef.value) return;
 
-  gsap.killTweensOf(previewCardRef.value)
+  gsap.killTweensOf(previewCardRef.value);
   gsap.fromTo(
     previewCardRef.value,
     {
@@ -286,80 +354,81 @@ const showPreview = async (event: PointerEvent, index: number) => {
       y: 0,
       rotate: 0,
       duration: 0.4,
-      ease: 'power2.out',
-    }
-  )
-}
+      ease: "power2.out",
+    },
+  );
+};
 
 const getHoveredArchiveIndex = (event: PointerEvent) => {
-  const target = event.target
-  const row = target instanceof HTMLElement
-    ? target.closest<HTMLElement>('[data-archive-index]')
-    : null
+  const target = event.target;
+  const row =
+    target instanceof HTMLElement
+      ? target.closest<HTMLElement>("[data-archive-index]")
+      : null;
 
   if (!row) {
-    return null
+    return null;
   }
 
-  const index = Number(row.dataset.archiveIndex)
+  const index = Number(row.dataset.archiveIndex);
   if (Number.isNaN(index)) {
-    return null
+    return null;
   }
 
-  return index
-}
+  return index;
+};
 
 const handleListPointerOver = (event: PointerEvent) => {
-  const index = getHoveredArchiveIndex(event)
-  if (index === null) return
+  const index = getHoveredArchiveIndex(event);
+  if (index === null) return;
 
-  void showPreview(event, index)
-}
+  void showPreview(event, index);
+};
 
 const handleListPointerMove = (event: PointerEvent) => {
-  const index = getHoveredArchiveIndex(event)
+  const index = getHoveredArchiveIndex(event);
   if (index === null) {
-    handleListPointerLeave()
-    return
+    handleListPointerLeave();
+    return;
   }
 
-  void showPreview(event, index)
-}
+  void showPreview(event, index);
+};
 
 const handleListPointerLeave = () => {
-  const preview = previewRef.value
+  const preview = previewRef.value;
 
-  if (!preview || !previewVisible) return
+  if (!preview || !previewVisible) return;
 
-  previewVisible = false
-  gsap.killTweensOf(preview)
+  previewVisible = false;
+  gsap.killTweensOf(preview);
   if (previewCardRef.value) {
-    gsap.killTweensOf(previewCardRef.value)
+    gsap.killTweensOf(previewCardRef.value);
   }
   gsap.to(preview, {
     autoAlpha: 0,
     scale: 0.92,
     rotate: 0,
     duration: 0.32,
-    ease: 'power2.out',
+    ease: "power2.out",
     onComplete: () => {
       if (!previewVisible) {
-        activePreviewIndex.value = null
+        activePreviewIndex.value = null;
       }
     },
-  })
-}
+  });
+};
 
 onMounted(async () => {
-  await nextTick()
+  await nextTick();
 
-  if (!sectionRef.value) return
+  if (!sectionRef.value) return;
 
-  const { ScrollTrigger } = await import('gsap/ScrollTrigger')
-  gsap.registerPlugin(ScrollTrigger)
+  const { ScrollTrigger } = await import("gsap/ScrollTrigger");
+  gsap.registerPlugin(ScrollTrigger);
 
   ctx = gsap.context(() => {
-    const items = itemRefs.value.filter(Boolean)
+    const items = itemRefs.value.filter(Boolean);
 
     if (previewRef.value) {
       gsap.set(previewRef.value, {
@@ -370,114 +439,90 @@ onMounted(async () => {
         yPercent: -50,
         x: 0,
         y: 0,
-        transformOrigin: '50% 50%',
-      })
+        transformOrigin: "50% 50%",
+      });
     }
 
     if (prefersReducedMotion()) {
-      return
+      return;
     }
 
     if (topTrackRef.value) {
-      marqueeTweens.push(gsap.fromTo(topTrackRef.value, {
-        xPercent: 0,
-      }, {
-        xPercent: -50,
-        duration: 24,
-        ease: 'none',
-        repeat: -1,
-      }))
+      marqueeTweens.push(
+        gsap.fromTo(
+          topTrackRef.value,
+          {
+            xPercent: 0,
+          },
+          {
+            xPercent: -50,
+            duration: 24,
+            ease: "none",
+            repeat: -1,
+          },
+        ),
+      );
     }
 
     if (bottomTrackRef.value) {
-      marqueeTweens.push(gsap.fromTo(bottomTrackRef.value, {
-        xPercent: -50,
-      }, {
-        xPercent: 0,
-        duration: 24,
-        ease: 'none',
-        repeat: -1,
-      }))
+      marqueeTweens.push(
+        gsap.fromTo(
+          bottomTrackRef.value,
+          {
+            xPercent: -50,
+          },
+          {
+            xPercent: 0,
+            duration: 24,
+            ease: "none",
+            repeat: -1,
+          },
+        ),
+      );
     }
 
     if (watermarkRef.value) {
-      gsap.from(watermarkRef.value, {
-        autoAlpha: 0,
-        x: -28,
-        duration: 0.9,
-        ease: 'power3.out',
-        scrollTrigger: {
-          trigger: sectionRef.value,
-          start: 'top 72%',
-          toggleActions: 'play none none reverse',
-        },
-      })
+      gsap.set(watermarkRef.value, { autoAlpha: 0, x: -28 });
     }
 
     if (items.length) {
-      const itemLines = gsap.utils.toArray<HTMLElement>('.archive-item-line')
-      const chars = gsap.utils.toArray<HTMLElement>('.char')
-      const meta = gsap.utils.toArray<HTMLElement>('.archive-role, .archive-year')
+      const root = sectionRef.value!;
+      const itemLines = Array.from(
+        root.querySelectorAll<HTMLElement>(".archive-item-line"),
+      );
+      const chars = Array.from(root.querySelectorAll<HTMLElement>(".char"));
+      const meta = Array.from(
+        root.querySelectorAll<HTMLElement>(".archive-role, .archive-year"),
+      );
 
-      gsap.set(items, {
-        autoAlpha: 1,
-        y: 0,
-      })
-      gsap.set(itemLines, { width: 0 })
-      gsap.set(chars, { y: '100%', autoAlpha: 0 })
-      gsap.set(meta, { autoAlpha: 0, y: 16 })
-
-      const listTimeline = gsap.timeline({
-        scrollTrigger: {
-          trigger: sectionRef.value,
-          start: 'top 80%',
-          toggleActions: 'play none none reverse',
-        },
-      })
-
-      listTimeline
-        .to(itemLines, {
-          width: '100%',
-          duration: 1.5,
-          ease: 'power3.inOut',
-          stagger: 0.1,
-        })
-        .to(chars, {
-          y: '0%',
-          autoAlpha: 1,
-          duration: 0.8,
-          ease: 'power2.out',
-          stagger: 0.015,
-        }, '-=1')
-        .to(meta, {
-          autoAlpha: 1,
-          y: 0,
-          duration: 0.6,
-          ease: 'power2.out',
-          stagger: 0.08,
-        }, '-=0.65')
+      gsap.set(items, { autoAlpha: 1, y: 0 });
+      gsap.set(itemLines, { width: 0 });
+      gsap.set(chars, { y: "100%", autoAlpha: 0 });
+      gsap.set(meta, { autoAlpha: 0, y: 16 });
     }
-  }, sectionRef.value)
-})
+
+    requestAnimationFrame(() => ScrollTrigger.refresh());
+  }, sectionRef.value);
+});
 
 onBeforeUnmount(() => {
-  marqueeTweens.forEach((tween) => tween.kill())
-  marqueeTweens = []
-  ctx?.revert()
-  ctx = null
-  previewVisible = false
+  marqueeTweens.forEach((tween) => tween.kill());
+  marqueeTweens = [];
+  ctx?.revert();
+  ctx = null;
+  previewVisible = false;
   if (previewRef.value) {
-    gsap.killTweensOf(previewRef.value)
+    gsap.killTweensOf(previewRef.value);
   }
   if (previewCardRef.value) {
-    gsap.killTweensOf(previewCardRef.value)
+    gsap.killTweensOf(previewCardRef.value);
   }
-})
+});
 </script>
 
 <style scoped>
 .font-serif {
-  font-family: 'Cormorant Garamond', 'Noto Serif SC', 'Songti SC', serif;
+  font-family: "Cormorant Garamond", "Noto Serif SC", "Songti SC", serif;
 }
 
 .archive-grid {

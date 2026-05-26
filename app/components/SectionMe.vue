@@ -278,7 +278,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from "vue";
 import { gsap } from "gsap";
-import headPortrait from "../assets/images/head_portrait.jpg";
+import headPortrait from "../assets/images/head_portrait.webp";
 
 const sectionRef = ref<HTMLElement | null>(null);
 const sectionHeadingTitleRef = ref<HTMLElement | null>(null);
@@ -389,7 +389,6 @@ onMounted(async () => {
       ? gsap.utils.toArray<HTMLElement>(".log-item", logsRef.value)
       : [];
 
-    // Initial states
     gsap.set(cornerAnchors, { opacity: 0 });
     gsap.set(topLabel, { opacity: 0 });
     gsap.set(topDivider, { scaleX: 0, transformOrigin: "left center" });
@@ -439,7 +438,6 @@ onMounted(async () => {
       logChars.push(chars);
     });
 
-    // SVG setup
     const traceMotionTweens: gsap.core.Tween[] = [];
     let auditLines: SVGPathElement[] = [];
     let traceLines: SVGPathElement[] = [];
@@ -521,7 +519,6 @@ onMounted(async () => {
       });
     }
 
-    // Master timeline — single ScrollTrigger drives all four steps
     const masterTl = gsap.timeline({
       delay: 0.2,
       scrollTrigger: {
@@ -536,7 +533,6 @@ onMounted(async () => {
       },
     });
 
-    // Step 1: Framework — corner anchors + top label flash in, then divider line extends
     masterTl
       .to(cornerAnchors, {
         opacity: 0.6,
@@ -555,7 +551,6 @@ onMounted(async () => {
         "-=0.08",
       );
 
-    // Step 2: SVG background lines draw, then trace particles begin moving
     if (auditLines.length) {
       masterTl
         .set(meCrossRef.value, { autoAlpha: 1 })
@@ -596,7 +591,6 @@ onMounted(async () => {
         });
     }
 
-    // Step 3: Title rises from bottom + portrait fades in simultaneously
     masterTl.to(
       titlePhrases,
       {
@@ -625,8 +619,6 @@ onMounted(async () => {
       );
     }
 
-    // Step 4: Log items — starts near end of step 3
-    // Per item: divider extends from center → paragraph drops in → LOG label chars fall
     masterTl.addLabel("logStart", "-=0.4");
 
     logItems.forEach((item, i) => {

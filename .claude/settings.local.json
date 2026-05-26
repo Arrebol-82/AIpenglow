@@ -4,7 +4,23 @@
       "Bash(npm run *)",
       "Bash(npm install *)",
       "Bash(npx nuxt *)",
-      "PowerShell(Get-NetTCPConnection *)"
+      "PowerShell(Get-NetTCPConnection *)",
+      "Bash(findstr /R \"three tweakpane simplex\")",
+      "Bash(npm uninstall *)",
+      "Bash(command -v playwright)",
+      "Bash(command -v chromium)",
+      "Bash(command -v chrome)",
+      "Bash(/c/Python/Scripts/playwright --version)",
+      "Bash(python -c \"import playwright; print\\(playwright.__version__\\)\")",
+      "Bash(/c/Python/Scripts/playwright.exe --version)",
+      "Bash(/c/Python/Scripts/playwright.exe install *)",
+      "PowerShell(playwright *)",
+      "Bash(npx playwright *)",
+      "Bash(node *)",
+      "Bash(grep -E \"position.*fixed|position.*sticky\" C:\\\\\\\\Alpenglow\\\\\\\\Alpenglow\\\\\\\\app\\\\\\\\components\\\\\\\\TheNavbar.vue)",
+      "Bash(cd C:\\\\\\\\Alpenglow\\\\\\\\Alpenglow)",
+      "Bash(pkill -f \"nuxt dev\")",
+      "Bash(pkill -f \"node.*nuxt\")"
     ]
   }
 }

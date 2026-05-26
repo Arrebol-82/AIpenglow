@@ -1,7 +1,7 @@
 <template>
   <section
     id="now"
-    class="relative min-h-screen overflow-hidden bg-[#F6F1E7] font-sans text-[#1D1E18]"
+    class="now-section relative min-h-screen overflow-hidden bg-[#F6F1E7] font-sans text-[#1D1E18] lg:h-screen"
   >
     <div
       class="future-watermark absolute -bottom-[3.125rem] -left-6 z-0 select-none pointer-events-none leading-none text-[calc(min(30vw,30vh)+6.875rem)] md:left-0"
@@ -9,9 +9,11 @@
       未来
     </div>
 
-    <div class="relative z-10 mx-auto grid grid-cols-1 gap-8 lg:grid-cols-12">
+    <div
+      class="relative z-10 mx-auto grid grid-cols-1 gap-8 lg:h-full lg:min-h-0 lg:grid-cols-12"
+    >
       <div
-        class="flex flex-col gap-6 pt-10 lg:col-span-4 lg:min-h-screen lg:justify-end lg:pb-[15vh]"
+        class="flex flex-col gap-6 pt-10 lg:col-span-4 lg:h-full lg:min-h-0 lg:justify-end lg:pb-[10vh]"
       >
         <div
           v-for="(entry, index) in futureEntries"
@@ -40,21 +42,21 @@
       </div>
 
       <div
-        class="relative hidden min-h-[700px] justify-center overflow-hidden lg:col-span-2 lg:flex lg:min-h-screen"
+        class="relative hidden justify-center overflow-hidden lg:col-span-2 lg:flex lg:h-full lg:min-h-0"
       >
         <div
-          class="relative ml-12 translate-x-[calc(2.5rem+35px)] h-full min-h-full w-[20px]"
+          class="relative ml-12 translate-x-[calc(2.5rem+45px)] h-full min-h-full w-[20px]"
         >
           <div class="absolute right-[calc(100%+0.375rem)] top-32">
             <div
               class="vertical-text whitespace-nowrap font-mono text-[12px] uppercase tracking-[0.2em] text-[#1D1E18]/50"
             >
-              <span class="translate-y-[5rem]">聪明一点点</span>
+              <span class="translate-y-[5.625rem]">聪明一点点</span>
               <span>争取比昨天的自己</span>
             </div>
             <span
               aria-hidden="true"
-              class="absolute bottom-0 left-0 text-[1rem] leading-none text-[#1D1E18]/50 [transform:translateX(-0.875rem)_translateY(6rem)_scaleY(-1)]"
+              class="absolute bottom-0 left-0 text-[1rem] leading-none text-[#1D1E18]/50 [transform:translateX(-0.875rem)_translateY(6.625rem)_scaleY(-1)]"
             >
               「
             </span>
@@ -64,8 +66,8 @@
             ref="scaleViewportRef"
             class="scale-bar-stack h-full min-h-full w-[20px]"
             aria-hidden="true"
-            @pointerdown="handleScalePointerDown"
-            @wheel.prevent="handleTimelineWheel"
+            @pointerdown.stop.prevent="handleScalePointerDown"
+            @wheel="handleTimelineWheel"
           >
             <div ref="scaleTrackRef" class="scale-bar-track">
               <div ref="scaleCycleRef" class="scale-bar-cycle">
@@ -95,16 +97,18 @@
         </div>
       </div>
 
-      <div class="flex flex-col pt-8 lg:col-span-6 lg:pt-16 lg:pl-6">
-        <div class="stacked-board relative w-full">
+      <div
+        class="now-log-column relative z-20 flex flex-col pt-8 lg:col-span-6 lg:h-full lg:min-h-0 lg:pt-12 lg:pl-6"
+      >
+        <div class="stacked-board relative w-full lg:min-h-0 lg:flex-1">
           <div class="now-log-stack relative z-10">
             <div class="now-log-card now-log-card--1"></div>
             <div class="now-log-card now-log-card--2"></div>
             <div class="now-log-card now-log-card--3"></div>
             <div
               class="now-log-card now-log-card--4"
-              @pointerdown="handleScalePointerDown"
-              @wheel.prevent="handleTimelineWheel"
+              @pointerdown.stop.prevent="handleScalePointerDown"
+              @wheel="handleTimelineWheel"
             >
               <div ref="logViewportRef" class="now-log-viewport">
                 <div ref="logSheetRef" class="now-log-sheet">
@@ -122,7 +126,7 @@
           </div>
         </div>
 
-        <div class="relative z-20 mt-8 -translate-y-[20px] flex justify-end">
+        <div class="relative z-20 mt-8 -translate-y-[55px] flex justify-end">
           <button
             class="group flex cursor-pointer items-center border-[2.5px] border-[#1D1E18] bg-[#F6F1E7] shadow-sm transition-colors duration-200 hover:bg-[#1D1E18] hover:text-[#F6F1E7]"
           >
@@ -269,6 +273,24 @@ let updateLogEntryReveal: (() => void) | null = null;
 
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 
+const nudgePageScroll = (deltaY: number) => {
+  if (!import.meta.client || !deltaY) {
+    return;
+  }
+
+  const max = Math.max(
+    0,
+    document.documentElement.scrollHeight - window.innerHeight,
+  );
+  const next = Math.min(max, Math.max(0, window.scrollY + deltaY));
+  const lenis = useLenis();
+  if (lenis) {
+    lenis.scrollTo(next, { immediate: true });
+  } else {
+    window.scrollTo({ top: next, behavior: "auto" });
+  }
+};
+
 const createLogEntryRevealUpdater = () => {
   return () => {
     if (!logViewportRef.value || !logSheetRef.value) {
@@ -281,8 +303,10 @@ const createLogEntryRevealUpdater = () => {
     const fadeDistance = 92;
     const lastIndex = entries.length - 1;
 
-    const distFromTopBoundary = timelineMaxOffsetY.value - timelineOffsetY.value;
-    const distFromBottomBoundary = timelineOffsetY.value - timelineMinOffsetY.value;
+    const distFromTopBoundary =
+      timelineMaxOffsetY.value - timelineOffsetY.value;
+    const distFromBottomBoundary =
+      timelineOffsetY.value - timelineMinOffsetY.value;
 
     entries.forEach((entry, index) => {
       const entryRect = entry.getBoundingClientRect();
@@ -293,13 +317,17 @@ const createLogEntryRevealUpdater = () => {
       );
 
       const naturalReveal = clamp01(distanceToVisibleArea / fadeDistance);
-      const topBoundaryReveal = index === 0
-        ? clamp01(1 - distFromTopBoundary / fadeDistance)
-        : 0;
-      const bottomBoundaryReveal = index === lastIndex
-        ? clamp01(1 - distFromBottomBoundary / fadeDistance)
-        : 0;
-      const revealProgress = Math.max(naturalReveal, topBoundaryReveal, bottomBoundaryReveal);
+      const topBoundaryReveal =
+        index === 0 ? clamp01(1 - distFromTopBoundary / fadeDistance) : 0;
+      const bottomBoundaryReveal =
+        index === lastIndex
+          ? clamp01(1 - distFromBottomBoundary / fadeDistance)
+          : 0;
+      const revealProgress = Math.max(
+        naturalReveal,
+        topBoundaryReveal,
+        bottomBoundaryReveal,
+      );
 
       gsap.set(entry, {
         autoAlpha: revealProgress,
@@ -448,16 +476,50 @@ const handleScalePointerMove = (event: PointerEvent) => {
     return;
   }
 
-  timelineOffsetY.value = clampTimelineOffset(
-    timelineDragStartOffset + event.clientY - scaleDragStartY,
-  );
+  event.preventDefault();
+  const pointerDeltaY = event.clientY - scaleDragStartY;
+  const rawOffset = timelineDragStartOffset + pointerDeltaY;
+  const clampedOffset = clampTimelineOffset(rawOffset);
+  const overscrollDelta = rawOffset - clampedOffset;
+
+  timelineOffsetY.value = clampedOffset;
   syncScaleOffset();
+  if (overscrollDelta) {
+    nudgePageScroll(-overscrollDelta);
+  }
+
+  scaleDragStartY = event.clientY;
+  timelineDragStartOffset = timelineOffsetY.value;
 };
 
 const handleTimelineWheel = (event: WheelEvent) => {
-  timelineOffsetY.value = clampTimelineOffset(
-    timelineOffsetY.value - event.deltaY,
-  );
+  if (timelineMinOffsetY.value === timelineMaxOffsetY.value) {
+    return;
+  }
+
+  const wantsNextLog = event.deltaY > 0;
+  const wantsPreviousLog = event.deltaY < 0;
+  const canScrollLogNext =
+    timelineOffsetY.value > timelineMinOffsetY.value + 0.5;
+  const canScrollLogPrevious =
+    timelineOffsetY.value < timelineMaxOffsetY.value - 0.5;
+
+  if (
+    (wantsNextLog && !canScrollLogNext) ||
+    (wantsPreviousLog && !canScrollLogPrevious)
+  ) {
+    timelineOffsetY.value = clampTimelineOffset(timelineOffsetY.value);
+    syncScaleOffset();
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  const rawOffset = timelineOffsetY.value - event.deltaY;
+  const clampedOffset = clampTimelineOffset(rawOffset);
+
+  timelineOffsetY.value = clampedOffset;
   syncScaleOffset();
 };
 
@@ -466,6 +528,8 @@ const handleScalePointerUp = () => {
 };
 
 const handleScalePointerDown = (event: PointerEvent) => {
+  event.preventDefault();
+  event.stopPropagation();
   isScaleDragging.value = true;
   scaleDragStartY = event.clientY;
   timelineDragStartOffset = timelineOffsetY.value;
@@ -609,8 +673,8 @@ onUnmounted(() => {
 
 .now-log-card {
   position: absolute;
-  width: 33.75rem;
-  height: 42.5rem;
+  width: 32.8125rem;
+  height: 41.375rem;
   border: 1.5px solid rgba(29, 30, 24, 0.68);
   background: linear-gradient(
     180deg,
@@ -706,6 +770,7 @@ onUnmounted(() => {
 
 .now-log-entry {
   position: relative;
+  z-index: 1;
   display: flex;
   width: calc(100% + 5rem);
   height: 80px;
@@ -802,14 +867,49 @@ onUnmounted(() => {
 }
 
 @media (min-width: 1024px) {
+  .now-log-column {
+    overflow-x: visible;
+    overflow-y: clip;
+  }
+
+  .now-log-stack {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .now-log-card {
+    height: clamp(30.25rem, calc(100vh - 13rem), 41.375rem);
+  }
+
+  .now-log-card--1 {
+    top: clamp(1.5rem, 4.4vh, 3.125rem);
+  }
+
+  .now-log-card--2 {
+    top: clamp(2.1rem, 5.8vh, 4.3125rem);
+  }
+
+  .now-log-card--3 {
+    top: clamp(2.7rem, 7.1vh, 5.5rem);
+  }
+
+  .now-log-card--4 {
+    top: clamp(3.3rem, 8.5vh, 6.6875rem);
+  }
+
+  .now-log-sheet {
+    gap: 26px;
+    padding-block: clamp(1rem, 2.4vh, 1.6rem);
+  }
+
   .now-log-viewport {
-    --now-log-mask-bleed-left: 15.75rem;
+    --now-log-mask-bleed-left: 16.6875rem;
     --now-log-mask-bleed-right: 3rem;
   }
 
   .now-log-entry {
     --now-connector-gap: 0.55rem;
-    --now-connector-width: 12rem;
+    --now-connector-width: 12.9375rem;
     --now-connector-dot: 0.68rem;
   }
 
@@ -817,6 +917,7 @@ onUnmounted(() => {
   .now-log-entry::after {
     content: "";
     position: absolute;
+    z-index: 2;
     top: 50%;
     pointer-events: none;
   }

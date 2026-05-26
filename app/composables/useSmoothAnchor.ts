@@ -1,11 +1,10 @@
-import { ScrollSmoother } from 'gsap/ScrollSmoother'
-
 export function useSmoothAnchor() {
   return (href: string) => {
     if (!import.meta.client) return
 
-    const smoother = ScrollSmoother.get()
-    if (!smoother) {
+    const lenis = useLenis()
+
+    if (!lenis) {
       if (href && href !== '#') {
         const target = document.querySelector(href)
         target?.scrollIntoView({ behavior: 'smooth' })
@@ -16,13 +15,13 @@ export function useSmoothAnchor() {
     }
 
     if (href === '#' || href === '') {
-      smoother.scrollTo(0, true)
+      lenis.scrollTo(0)
       return
     }
 
     const target = document.querySelector(href)
     if (!target) return
 
-    smoother.scrollTo(target as HTMLElement, true)
+    lenis.scrollTo(target as HTMLElement)
   }
 }

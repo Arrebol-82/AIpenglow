@@ -3,36 +3,22 @@ import { gsap } from "gsap";
 import topEdgeImage from "~/assets/images/main.webp";
 
 let revealAnimationContext: gsap.Context | null = null;
-let smoother: import("gsap/ScrollSmoother").ScrollSmoother | null = null;
+let destroyPageScroll: (() => void) | null = null;
 
 const revealStageRef = ref<HTMLElement | null>(null);
 const heroLayerRef = ref<HTMLElement | null>(null);
 
-const prefersReducedMotion = () =>
-  import.meta.client &&
-  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
 onMounted(async () => {
-  if (prefersReducedMotion() || !revealStageRef.value || !heroLayerRef.value) {
+  if (!revealStageRef.value || !heroLayerRef.value) {
     return;
   }
 
-  const [{ ScrollTrigger }, { ScrollSmoother }] = await Promise.all([
-    import("gsap/ScrollTrigger"),
-    import("gsap/ScrollSmoother"),
-  ]);
+  const pageScroll = await initPageScroll();
+  if (!pageScroll) {
+    return;
+  }
 
-  gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
-
-  smoother = ScrollSmoother.create({
-    wrapper: "#smooth-wrapper",
-    content: "#smooth-content",
-    smooth: 2,
-    effects: true,
-    normalizeScroll: true,
-  });
-
-  ScrollTrigger.refresh();
+  destroyPageScroll = pageScroll.destroy;
 
   revealAnimationContext = gsap.context(() => {
     const getHeroParallaxStart = () =>
@@ -63,14 +49,34 @@ onMounted(async () => {
       },
       0,
     );
+
+    const dividerLines = gsap.utils.toArray<HTMLElement>(".divider-line");
+    if (dividerLines.length) {
+      gsap.fromTo(
+        dividerLines,
+        { scaleX: 0 },
+        {
+          scaleX: 1,
+          ease: "none",
+          scrollTrigger: {
+            trigger: ".divider-01-02",
+            start: "top bottom",
+            end: "center center",
+            scrub: true,
+          },
+        },
+      );
+    }
   }, revealStageRef.value);
+
+  pageScroll.refresh();
 });
 
 onBeforeUnmount(() => {
   revealAnimationContext?.revert();
   revealAnimationContext = null;
-  smoother?.kill();
-  smoother = null;
+  destroyPageScroll?.();
+  destroyPageScroll = null;
 });
 </script>
 
@@ -80,60 +86,56 @@ onBeforeUnmount(() => {
 
     <TheNavbar />
 
-    <div id="smooth-wrapper">
-      <div id="smooth-content">
-        <div ref="revealStageRef" class="home-reveal-stage">
-          <div ref="heroLayerRef" class="home-hero-layer">
-            <HeroSection />
-          </div>
+    <div ref="revealStageRef" class="home-reveal-stage">
+      <div ref="heroLayerRef" class="home-hero-layer">
+        <HeroSection />
+      </div>
 
-          <div class="home-content-layer">
-            <div class="paper-transition relative w-full" aria-hidden="true">
-              <img
-                :src="topEdgeImage"
-                alt=""
-                aria-hidden="true"
-                class="torn-edge-image pointer-events-none absolute inset-x-0 bottom-0 block select-none"
-              />
-            </div>
-
-            <main
-              class="paper-main relative w-full px-6 pt-0 pb-24 md:px-12 md:pt-0 md:pb-28 xl:px-[60px]"
-            >
-              <div class="relative z-10 space-y-36 md:space-y-40">
-                <SectionMe />
-
-                <SectionSoul />
-
-                <div
-                  class="relative z-10 mx-auto flex w-full max-w-[1400px] items-center justify-center gap-4 px-6 md:px-12 lg:px-24"
-                >
-                  <div class="h-px flex-1 bg-[#1D1E18] opacity-30"></div>
-                  <div
-                    class="whitespace-nowrap font-mono text-[10px] font-bold tracking-widest text-[#1D1E18] opacity-80 uppercase md:text-xs"
-                  >
-                    [ 01 &gt; 02 ]
-                  </div>
-                  <div class="h-px flex-1 bg-[#1D1E18] opacity-30"></div>
-                </div>
-
-                <SectionCode />
-
-                <SectionWorks />
-
-                <SectionArchive />
-
-                <SectionInspiration />
-
-                <SectionNow />
-              </div>
-            </main>
-          </div>
+      <div class="home-content-layer">
+        <div class="paper-transition relative w-full" aria-hidden="true">
+          <img
+            :src="topEdgeImage"
+            alt=""
+            aria-hidden="true"
+            class="torn-edge-image pointer-events-none absolute inset-x-0 bottom-0 block select-none"
+          />
         </div>
 
-        <TheFooter />
+        <main
+          class="paper-main relative w-full px-6 pt-0 pb-24 md:px-12 md:pt-0 md:pb-28 xl:px-[60px]"
+        >
+          <div class="relative z-10 space-y-36 md:space-y-40">
+            <SectionMe />
+
+            <SectionSoul />
+
+            <div
+              class="divider-01-02 relative z-10 -mx-6 flex w-auto items-center justify-center gap-4 md:-mx-12 xl:-mx-[60px]"
+            >
+              <div
+                class="divider-line divider-line--left h-px flex-1 bg-[#1D1E18] opacity-30"
+              ></div>
+              <div
+                class="whitespace-nowrap font-mono text-[10px] font-bold tracking-widest text-[#1D1E18] opacity-80 uppercase md:text-xs"
+              >
+                [ 01 &gt; 02 ]
+              </div>
+              <div
+                class="divider-line divider-line--right h-px flex-1 bg-[#1D1E18] opacity-30"
+              ></div>
+            </div>
+
+            <SectionCode />
+
+            <WorksArchiveStage />
+
+            <SectionInspiration />
+          </div>
+        </main>
       </div>
     </div>
+
+    <NowFooterStage />
   </div>
 </template>
 
@@ -146,6 +148,7 @@ onBeforeUnmount(() => {
 .paper-transition {
   overflow: hidden;
   height: 5.75rem;
+  margin-bottom: -2px;
   background-color: transparent;
 }
 
@@ -194,6 +197,7 @@ onBeforeUnmount(() => {
 }
 
 .paper-main {
+  margin-top: -2px;
   padding-top: 0;
   background: #f6f1e7;
 }
@@ -203,5 +207,15 @@ onBeforeUnmount(() => {
   height: 100%;
   object-fit: fill;
   object-position: center bottom;
+}
+
+.divider-line {
+  will-change: transform;
+}
+.divider-line--left {
+  transform-origin: right center;
+}
+.divider-line--right {
+  transform-origin: left center;
 }
 </style>

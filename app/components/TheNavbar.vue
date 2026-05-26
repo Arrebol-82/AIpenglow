@@ -17,6 +17,7 @@ const hoveredSection = ref("");
 const headerRef = ref<HTMLElement | null>(null);
 const heroIntroComplete = useState("hero-intro-complete", () => false);
 const navbarIntroComplete = useState("navbar-intro-complete", () => false);
+const navOnDark = useState<boolean>("navbar-on-dark", () => false);
 const indicatorStyle = ref({
   opacity: "0",
   transform: "translateX(0)",
@@ -72,9 +73,9 @@ const syncActiveSection = () => {
 
   if (!isColorSwitchComplete.value) {
     isNavbarVisible.value = true;
-  } else if (scrollDelta > 4) {
+  } else if (scrollDelta > 1) {
     isNavbarVisible.value = false;
-  } else if (scrollDelta < -2) {
+  } else if (scrollDelta < -1) {
     isNavbarVisible.value = true;
   }
 
@@ -238,6 +239,7 @@ watch(heroIntroComplete, async (isComplete) => {
       'site-header fixed top-0 z-50 w-full',
       {
         'navbar-past-home': hasScrolledPastHome,
+        'navbar-on-dark': navOnDark,
         'site-header--hidden': !isNavbarVisible,
       },
     ]"
@@ -389,5 +391,45 @@ nav {
     transform 320ms ease,
     width 320ms ease,
     opacity 320ms ease;
+}
+
+.navbar-on-dark::before {
+  background-color: #000;
+  clip-path: inset(0 0 0 0);
+  transition:
+    clip-path 360ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 360ms ease;
+}
+
+.navbar-on-dark {
+  border-bottom-color: rgb(255 255 255 / 0.08);
+  box-shadow: 0 12px 28px rgb(0 0 0 / 0.4);
+}
+
+.navbar-on-dark .site-brand {
+  color: rgb(248 246 241 / 0.96);
+  text-shadow: none;
+}
+
+.navbar-on-dark .nav-link {
+  color: rgb(232 221 208 / 0.78);
+  text-shadow: none;
+}
+
+.navbar-on-dark .nav-link:hover {
+  color: #fff;
+}
+
+.navbar-on-dark .nav-link--active {
+  color: #fff;
+}
+
+.navbar-on-dark .nav-indicator {
+  background: #fff;
+}
+
+.navbar-on-dark .material-symbols-outlined {
+  color: rgb(248 246 241 / 0.92);
+  text-shadow: none;
 }
 </style>

@@ -1,24 +1,22 @@
 <template>
   <section
     id="reflections"
-    class="section-code bg-[#f6f1e7] text-[#1D1E18] py-24 px-6 md:px-12 lg:px-24 relative overflow-hidden font-sans"
+    class="section-code bg-[#f6f1e7] text-[#1D1E18] pt-12 pb-24 px-6 md:px-12 lg:px-24 relative overflow-hidden font-sans"
   >
-    <div
-      class="reflection-panel isolate relative z-10 max-w-[1400px] mx-auto"
-    >
+    <div class="reflection-panel isolate relative z-10 max-w-[1400px] mx-auto">
       <div class="relative z-10 pb-12 md:pb-14 lg:min-h-[36rem]">
         <!-- 巨大的透明描边水印文字：CODE (水平方向) -->
         <div
-          class="watermark-text absolute -top-16 md:-top-32 right-0 opacity-80 pointer-events-none select-none tracking-[-0.03em] text-[5.75rem] md:text-[11rem] lg:text-[15rem]"
+          class="watermark-text absolute -top-16 md:-top-32 right-0 opacity-80 pointer-events-none select-none tracking-[-0.03em] text-[8.625rem] md:text-[14rem] lg:text-[18rem]"
         >
           <span class="watermark-leading">C</span>ODE
         </div>
 
         <!-- 顶部标签栏 -->
         <div
-          class="relative z-10 mb-6 flex translate-y-[5rem] items-center justify-between text-[10px] font-mono font-bold tracking-widest text-[#1D1E18] opacity-80 uppercase md:mb-8 md:text-xs"
+          class="relative z-10 mb-6 flex -translate-y-12 items-center justify-between text-[10px] font-mono font-bold tracking-widest text-[#1D1E18] opacity-80 uppercase md:mb-8 md:text-xs"
         >
-          <span>TECH_DIRECTION_UNIT</span>
+          <span>STACK_MODULE</span>
         </div>
 
         <div
@@ -46,11 +44,18 @@
                 </p>
 
                 <!-- 技术标签 -->
-                <ul ref="tagsRef" class="reflection-tags" aria-label="Tech stack">
+                <ul
+                  ref="tagsRef"
+                  class="reflection-tags"
+                  aria-label="Tech stack"
+                >
                   <li
                     v-for="tag in techTags"
                     :key="tag.label"
-                    :class="['reflection-tag', `reflection-tag--${tag.variant}`]"
+                    :class="[
+                      'reflection-tag',
+                      `reflection-tag--${tag.variant}`,
+                    ]"
                   >
                     <Icon
                       v-if="tag.type === 'icon'"
@@ -113,7 +118,7 @@
         <div
           class="absolute bottom-0 right-0 text-[10px] font-mono font-bold tracking-widest text-[#1D1E18] opacity-80 uppercase md:text-xs"
         >
-          IDEA_MTH_LOG
+          BUILD_LOG
         </div>
       </div>
     </div>
@@ -181,7 +186,6 @@ onMounted(async () => {
   gsap.registerPlugin(ScrollTrigger);
 
   ctx = gsap.context(() => {
-    // CODE 标题浮现
     gsap.from(".code-title", {
       y: 30,
       opacity: 0,
@@ -190,7 +194,6 @@ onMounted(async () => {
       scrollTrigger: { trigger: "#reflections", start: "top 80%", once: true },
     });
 
-    // 技术栈 Tags 交错进入
     if (tagsRef.value) {
       const tags = gsap.utils.toArray<HTMLElement>(
         ".reflection-tag",
@@ -211,7 +214,6 @@ onMounted(async () => {
       });
     }
 
-    // Github 卡片浮现
     gsap.from(".github-card-wrapper", {
       y: 40,
       opacity: 0,
@@ -269,12 +271,12 @@ onBeforeUnmount(() => {
   margin-right: 0.05em;
 }
 
-/* --- 技术标签 --- */
 .reflection-tags {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
-  gap: 0.35rem;
+  column-gap: 1.5rem;
+  row-gap: 0.75rem;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -283,73 +285,49 @@ onBeforeUnmount(() => {
 .reflection-tag {
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
-  border: 1px solid rgba(29, 30, 24, 0.15);
+  gap: 0.5rem;
+  border: 1px solid rgba(29, 30, 24, 0.22);
   border-radius: 9999px;
-  background-color: rgba(255, 255, 255, 0.6);
-  padding: 0.5rem 1.125rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #1d1e18;
-  box-shadow: 0 1px 2px rgba(29, 30, 24, 0.06);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  --tag-glow: rgba(47, 58, 74, 0.25);
+  background: transparent;
+  padding: 0.4rem 0.75rem;
+  font-family:
+    ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono",
+    monospace;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(29, 30, 24, 0.85);
   transition:
-    border-color 280ms ease,
-    filter 280ms ease,
-    box-shadow 280ms ease,
-    transform 280ms ease,
-    background-color 280ms ease;
+    border-color 240ms ease,
+    background-color 240ms ease,
+    color 240ms ease;
 }
 
 .reflection-tag-icon {
-  width: 1.125rem;
-  height: 1.125rem;
+  width: 0.875rem;
+  height: 0.875rem;
   flex: none;
 }
 
 .reflection-tag:hover {
-  filter: drop-shadow(0 0 12px var(--tag-glow));
-  box-shadow: 0 14px 30px rgba(47, 58, 74, 0.08);
-  transform: translateY(-2px);
-  background-color: white;
-}
-
-.reflection-tag--javascript {
-  --tag-glow: rgba(247, 223, 30, 0.4);
-}
-.reflection-tag--vue {
-  --tag-glow: rgba(65, 184, 131, 0.4);
-}
-.reflection-tag--nuxt {
-  --tag-glow: rgba(0, 220, 130, 0.4);
-}
-.reflection-tag--typescript {
-  --tag-glow: rgba(49, 120, 198, 0.4);
-}
-.reflection-tag--vite {
-  --tag-glow: rgba(139, 92, 246, 0.4);
-}
-.reflection-tag--gpt {
-  --tag-glow: rgba(29, 30, 24, 0.48);
-}
-
-.reflection-tag--gpt:hover {
-  border-color: rgba(29, 30, 24, 0.3);
-  box-shadow: 0 14px 30px rgba(29, 30, 24, 0.16);
-}
-.reflection-tag--gemini {
-  --tag-glow: rgba(83, 130, 255, 0.4);
+  border-color: rgba(29, 30, 24, 0.55);
+  background-color: rgba(29, 30, 24, 0.04);
+  color: rgba(29, 30, 24, 1);
 }
 
 @media (min-width: 768px) {
   .reflection-tag {
-    font-size: 0.9375rem;
+    font-size: 0.75rem;
+    padding: 0.45rem 0.875rem;
+  }
+
+  .reflection-tag-icon {
+    width: 1rem;
+    height: 1rem;
   }
 }
 
-/* --- Github 卡片交互 --- */
 .github-card-wrapper {
   transition:
     transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
