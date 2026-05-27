@@ -52,19 +52,26 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, nextTick, watch } from "vue";
 import { gsap } from "gsap";
-import WorksCard3D from "~/components/Works/WorksCard3D.vue";
-import WorksProjectPanel from "~/components/Works/WorksProjectPanel.vue";
+import {
+  WORKS_CARD_FINAL_X_RATIO,
+  WORKS_CARD_TIMELINE_START,
+  WORKS_CARD_TIMELINE_END,
+  WORKS_CARD_FINAL_X_AT,
+  WORKS_WORDMARK,
+} from "~/components/site/works/worksConstants";
+import WorksCard3D from "~/components/site/works/card3d/WorksCard3D.vue";
+import WorksProjectPanel from "~/components/site/works/WorksProjectPanel.vue";
 
 const sectionRef = ref<HTMLElement | null>(null);
 const leftStageRef = ref<HTMLElement | null>(null);
 const rightPanelRef = ref<HTMLElement | null>(null);
 const wordmarkRef = ref<HTMLElement | null>(null);
-const worksCardFinalXRatio = -0.05;
-const worksCardTimelineStart = "top center";
-const worksCardTimelineEnd = "+=150%";
-const worksCardFinalXAt = 0.82;
+const worksCardFinalXRatio = WORKS_CARD_FINAL_X_RATIO;
+const worksCardTimelineStart = WORKS_CARD_TIMELINE_START;
+const worksCardTimelineEnd = WORKS_CARD_TIMELINE_END;
+const worksCardFinalXAt = WORKS_CARD_FINAL_X_AT;
 
-const worksWordmark = ref("Notion");
+const worksWordmark = ref(WORKS_WORDMARK);
 const worksWordmarkStyle = ref<Record<string, string>>({});
 const animationReady = ref(false);
 

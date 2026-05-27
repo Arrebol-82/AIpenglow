@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { gsap } from "gsap";
 import topEdgeImage from "~/assets/images/main.webp";
+import TheNavbar from "~/components/layout/TheNavbar.vue";
+import HeroSection from "~/components/site/hero/HeroSection.vue";
+import SectionMe from "~/components/site/me/SectionMe.vue";
+import SectionSoul from "~/components/site/soul/SectionSoul.vue";
+import SectionCode from "~/components/site/code/SectionCode.vue";
+import SectionInspiration from "~/components/site/inspiration/SectionInspiration.vue";
+import WorksArchiveStage from "~/components/site/works/WorksArchiveStage.vue";
+import NowFooterStage from "~/components/site/now/NowFooterStage.vue";
 
 let revealAnimationContext: gsap.Context | null = null;
 let destroyPageScroll: (() => void) | null = null;
