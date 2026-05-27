@@ -345,7 +345,9 @@ export function useWorksCard3D(
       // trigger's final position after all parent layouts (WorksSection
       // clipPath + layout resize) have settled. Without this, the card's
       // start/end scroll positions are based on stale pre-layout geometry.
-      requestAnimationFrame(() => ScrollTrigger.refresh());
+      requestAnimationFrame(() => {
+        ScrollTrigger.refresh();
+      });
     }, sectionEl);
   }
 

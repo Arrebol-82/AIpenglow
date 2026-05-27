@@ -242,6 +242,7 @@ onMounted(async () => {
         pinSpacing: true,
         invalidateOnRefresh: true,
         scrub: 1,
+        refreshPriority: 20,
         onEnter: () => {
           setDotsActive(true);
           navOnDark.value = true;

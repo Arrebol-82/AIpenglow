@@ -1,7 +1,7 @@
 <template>
   <div class="works-archive-stage">
     <div ref="worksWrapperRef" class="works-wrapper">
-      <SectionWorks />
+      <SectionWorks @ready="onWorksReady" />
     </div>
     <div ref="archiveWrapperRef" class="archive-wrapper">
       <SectionArchive ref="archiveRef" />
@@ -19,6 +19,9 @@ const archiveWrapperRef = ref<HTMLElement | null>(null);
 const archiveRef = ref<InstanceType<typeof SectionArchive> | null>(null);
 
 let stageCtx: gsap.Context | null = null;
+let stageInitialized = false;
+
+const worksReady = ref(false);
 
 const prefersReducedMotion = () =>
   import.meta.client &&
@@ -26,6 +29,12 @@ const prefersReducedMotion = () =>
 
 onMounted(async () => {
   await nextTick();
+});
+
+async function onWorksReady() {
+  if (stageInitialized) return;
+  stageInitialized = true;
+  worksReady.value = true;
 
   const worksWrapper = worksWrapperRef.value;
   const archiveWrapper = archiveWrapperRef.value;
@@ -75,9 +84,11 @@ onMounted(async () => {
     // SectionArchive content renders inside archiveWrapper. Without this the
     // pin height may be stale (0 or pre-render), breaking all downstream
     // scroll offsets and the sticky worksWrapper boundary.
-    requestAnimationFrame(() => ScrollTrigger.refresh());
+    requestAnimationFrame(() => {
+      ScrollTrigger.refresh();
+    });
   });
-});
+}
 
 onBeforeUnmount(() => {
   stageCtx?.revert();

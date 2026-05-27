@@ -79,6 +79,10 @@ let gsapCtx: gsap.Context | null = null;
 let wordmarkResizeObserver: ResizeObserver | null = null;
 let handleWordmarkFontsReady: (() => void) | null = null;
 
+const emit = defineEmits<{
+  (e: "ready"): void;
+}>();
+
 defineExpose({ sectionRef });
 
 const prefersReducedMotion = () =>
@@ -148,6 +152,7 @@ onMounted(async () => {
 
     animationReady.value = true;
 
+    // --- reveal timeline ---
     gsap
       .timeline({
         defaults: { ease: "none" },
@@ -166,6 +171,7 @@ onMounted(async () => {
       )
       .to(wordmarkRef.value, { opacity: 0.84, duration: 0.7 }, 0.15);
 
+    // --- layout timeline ---
     const layoutTl = gsap.timeline({
       defaults: { ease: "none" },
       scrollTrigger: {
@@ -199,7 +205,10 @@ onMounted(async () => {
     // measure correct trigger positions based on final section height. Without
     // this the start/end values may use stale measurements from before
     // interior content (wordmark, card, panel) fully renders.
-    requestAnimationFrame(() => ScrollTrigger.refresh());
+    requestAnimationFrame(() => {
+      ScrollTrigger.refresh();
+      emit("ready");
+    });
   }, sectionRef.value);
 });
 

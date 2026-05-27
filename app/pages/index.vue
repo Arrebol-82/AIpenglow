@@ -71,6 +71,12 @@ onMounted(async () => {
             start: "top bottom",
             end: "center center",
             scrub: true,
+            // Ensures all ScrollTrigger internal measurements are re-evaluated
+            // after the page is fully rendered and other components (e.g.
+            // WorksSection, SectionArchive) have registered their own
+            // ScrollTriggers. Without this, the divider line animation may
+            // start or end at incorrect scroll positions.
+            invalidateOnRefresh: true,
           },
         },
       );
@@ -78,6 +84,13 @@ onMounted(async () => {
   }, revealStageRef.value);
 
   pageScroll.refresh();
+
+  // Deferred re‑refresh: after the initial render pass, child
+  // components (WorksSection, WorksArchiveStage, SectionArchive etc.)
+  // may have asynchronously registered their own ScrollTriggers. A
+  // single requestAnimationFrame ensures the final layout is measured
+  // and all pin spacers are recalculated, preventing stale offsets.
+  requestAnimationFrame(() => pageScroll.refresh());
 });
 
 onBeforeUnmount(() => {

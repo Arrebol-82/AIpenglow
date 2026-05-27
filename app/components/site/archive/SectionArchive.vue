@@ -390,9 +390,7 @@ onMounted(async () => {
       gsap.set(previewRef.value, PREVIEW_INITIAL);
     }
 
-    if (prefersReducedMotion()) {
-      return;
-    }
+    if (prefersReducedMotion()) return;
 
     if (topTrackRef.value) {
       marqueeTweens.push(
@@ -443,7 +441,9 @@ onMounted(async () => {
     // after SectionArchive content renders into archiveWrapper, otherwise the
     // pin height stays at pre-render value (0 or stale) and offsets all
     // subsequent scroll positions.
-    requestAnimationFrame(() => ScrollTrigger.refresh());
+    requestAnimationFrame(() => {
+      ScrollTrigger.refresh();
+    });
   }, sectionRef.value);
 });
 
