@@ -6,11 +6,15 @@
     <canvas
       ref="starCanvas"
       class="absolute inset-0 w-full h-full pointer-events-none"
-      style="z-index: 1"
+      style="z-index: 2; opacity: 0"
       aria-hidden="true"
     ></canvas>
 
-    <div aria-hidden="true" class="section-dots soul-dots"></div>
+    <div
+      class="soul-black-overlay absolute inset-0 bg-black pointer-events-none"
+      style="z-index: 1"
+    ></div>
+
     <div
       class="soul-watermark absolute right-0 top-[1.875rem] opacity-80 pointer-events-none select-none md:top-[2.375rem]"
     >
@@ -134,14 +138,7 @@ import {
   SOUL_TAG_BOTTOM_LEFT,
   SOUL_TAG_BOTTOM_CENTER,
 } from "./soulData";
-import {
-  SCROLL_START,
-  SCROLL_END,
-  DOT_CLIP_START,
-  DOT_CLIP_END,
-  DOT_R_MID,
-  DOT_R_LARGE,
-} from "./soulConstants";
+import { SCROLL_START, SCROLL_END } from "./soulConstants";
 
 interface Star {
   distance: number;
@@ -365,14 +362,7 @@ onMounted(async () => {
       titleEl.dataset.split = "1";
     }
 
-    const setDotsActive = (active: boolean) => {
-      document
-        .querySelectorAll<HTMLElement>(".section-dots")
-        .forEach((el) => el.classList.toggle("is-active", active));
-    };
-
-    const soulDotsEl =
-      sectionRef.value!.querySelector<HTMLElement>(".soul-dots");
+    gsap.set(starCanvas.value, { opacity: 0 });
 
     const soulTl = gsap.timeline({
       scrollTrigger: {
@@ -385,15 +375,12 @@ onMounted(async () => {
         scrub: 1,
         refreshPriority: 20,
         onEnter: () => {
-          setDotsActive(true);
           navOnDark.value = true;
         },
         onEnterBack: () => {
-          setDotsActive(true);
           navOnDark.value = true;
         },
         onLeaveBack: () => {
-          setDotsActive(false);
           navOnDark.value = false;
         },
         onLeave: () => {
@@ -416,34 +403,14 @@ onMounted(async () => {
     const fromBelow = () => window.innerHeight;
 
     soulTl
-      .fromTo(
-        soulDotsEl,
-        { clipPath: DOT_CLIP_START },
+      .to(
+        starCanvas.value,
         {
-          clipPath: DOT_CLIP_END,
-          ease: "power3.out",
-          duration: 1.1,
+          opacity: 1,
+          duration: 1.2,
+          ease: "power2.in",
         },
         0,
-      )
-
-      .to(
-        sectionRef.value,
-        {
-          keyframes: [
-            {
-              "--dot-r": DOT_R_MID,
-              duration: 0.6,
-              ease: "power2.in",
-            },
-            {
-              "--dot-r": DOT_R_LARGE,
-              duration: 0.8,
-              ease: "power2.out",
-            },
-          ],
-        },
-        "<0.6",
       )
 
       .from(
@@ -576,30 +543,6 @@ onBeforeUnmount(() => {
   width: 100vw;
   margin-left: calc(50% - 50vw);
   margin-right: calc(50% - 50vw);
-  --dot-color: #000000;
-  --dot-r: 1.8px;
-}
-
-.section-dots {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 150ms ease;
-  background-size: 38px 38px;
-  background-position: center;
-}
-
-.soul-dots {
-  background-image: radial-gradient(
-    var(--dot-color) var(--dot-r),
-    transparent var(--dot-r)
-  );
-}
-
-.section-dots.is-active {
-  opacity: 1;
 }
 
 .reflection-photo-shell {
