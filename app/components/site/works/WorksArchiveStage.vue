@@ -71,6 +71,10 @@ onMounted(async () => {
     tl.to(archiveWrapper, { autoAlpha: 1, duration: 0.001 }, 0.3);
     tl.to(worksWrapper, { yPercent: -100, ease: "none", duration: 1.0 }, 0.3);
 
+    // Refresh required: ensures the pin spacer height is calculated after
+    // SectionArchive content renders inside archiveWrapper. Without this the
+    // pin height may be stale (0 or pre-render), breaking all downstream
+    // scroll offsets and the sticky worksWrapper boundary.
     requestAnimationFrame(() => ScrollTrigger.refresh());
   });
 });

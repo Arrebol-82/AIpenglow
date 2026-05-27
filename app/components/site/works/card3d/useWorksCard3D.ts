@@ -341,6 +341,10 @@ export function useWorksCard3D(
         props.finalXAt ?? 0.82,
       );
 
+      // Refresh required: ensures the card 3D ScrollTrigger measures its
+      // trigger's final position after all parent layouts (WorksSection
+      // clipPath + layout resize) have settled. Without this, the card's
+      // start/end scroll positions are based on stale pre-layout geometry.
       requestAnimationFrame(() => ScrollTrigger.refresh());
     }, sectionEl);
   }

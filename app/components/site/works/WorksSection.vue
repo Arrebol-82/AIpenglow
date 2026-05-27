@@ -195,6 +195,10 @@ onMounted(async () => {
       );
     }
 
+    // Refresh required: ensures the two timelines (clipPath reveal + layout)
+    // measure correct trigger positions based on final section height. Without
+    // this the start/end values may use stale measurements from before
+    // interior content (wordmark, card, panel) fully renders.
     requestAnimationFrame(() => ScrollTrigger.refresh());
   }, sectionRef.value);
 });

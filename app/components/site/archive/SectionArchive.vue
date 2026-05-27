@@ -439,6 +439,10 @@ onMounted(async () => {
       gsap.set(meta, ENTRANCE_META.from);
     }
 
+    // Refresh required: ensures WorksArchiveStage's pin spacer recalculates
+    // after SectionArchive content renders into archiveWrapper, otherwise the
+    // pin height stays at pre-render value (0 or stale) and offsets all
+    // subsequent scroll positions.
     requestAnimationFrame(() => ScrollTrigger.refresh());
   }, sectionRef.value);
 });
