@@ -380,9 +380,6 @@ onMounted(async () => {
 
   if (!sectionRef.value) return;
 
-  const { ScrollTrigger } = await import("gsap/ScrollTrigger");
-  gsap.registerPlugin(ScrollTrigger);
-
   ctx = gsap.context(() => {
     const items = itemRefs.value.filter(Boolean);
 
@@ -438,8 +435,6 @@ onMounted(async () => {
       gsap.set(chars, ENTRANCE_CHARS.from);
       gsap.set(meta, ENTRANCE_META.from);
     }
-
-    requestAnimationFrame(() => ScrollTrigger.refresh());
   }, sectionRef.value);
 });
 

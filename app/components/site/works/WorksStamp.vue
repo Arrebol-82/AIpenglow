@@ -175,6 +175,11 @@ const handleStampClose = () => {
 
 onBeforeUnmount(() => {
   clearStampReturnTimer();
+  if (stampRef.value) {
+    gsap.killTweensOf(stampRef.value);
+    gsap.killTweensOf(stampRef.value.querySelectorAll("[data-stamp-edge]"));
+    gsap.killTweensOf(stampRef.value.querySelectorAll(":scope > div"));
+  }
 });
 </script>
 
