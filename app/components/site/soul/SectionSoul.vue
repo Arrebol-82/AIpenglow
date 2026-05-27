@@ -2,12 +2,15 @@
   <section
     ref="sectionRef"
     class="section-philosophy bg-[#f6f1e7] text-white pt-24 px-6 md:px-12 lg:px-24 min-h-screen relative z-30 overflow-hidden font-sans"
-    @pointermove="handlePanelPointerMove"
-    @pointerleave="handlePanelPointerLeave"
   >
-    <div aria-hidden="true" class="section-dots soul-dots"></div>
-    <div aria-hidden="true" class="section-dots section-dots--glow"></div>
+    <canvas
+      ref="starCanvas"
+      class="absolute inset-0 w-full h-full pointer-events-none"
+      style="z-index: 1"
+      aria-hidden="true"
+    ></canvas>
 
+    <div aria-hidden="true" class="section-dots soul-dots"></div>
     <div
       class="soul-watermark absolute right-0 top-[1.875rem] opacity-80 pointer-events-none select-none md:top-[2.375rem]"
     >
@@ -136,68 +139,206 @@ import {
   SCROLL_END,
   DOT_CLIP_START,
   DOT_CLIP_END,
-  BG_COLOR_MID,
-  BG_COLOR_FINAL,
   DOT_R_MID,
   DOT_R_LARGE,
 } from "./soulConstants";
 
+interface Star {
+  distance: number;
+  angle: number;
+  speed: number;
+  size: number;
+  phase: number;
+  twinkleSpeed: number;
+  baseAlpha: number;
+  variance: number;
+}
+
+interface Meteor {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  length: number;
+  thickness: number;
+  life: number;
+  maxLife: number;
+}
+
 const sectionRef = ref<HTMLElement | null>(null);
 const imageCardRef = ref<HTMLElement | null>(null);
+const starCanvas = ref<HTMLCanvasElement | null>(null);
 
 const navOnDark = useState<boolean>("navbar-on-dark", () => false);
 
 let ctx: gsap.Context | null = null;
-let panelGlowFrame = 0;
-let pendingPanelGlow: { x: string; y: string } | null = null;
+let cleanupCanvas: (() => void) | null = null;
 
 const prefersReducedMotion = () =>
   import.meta.client &&
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-const pointerHasPrecision = () =>
-  import.meta.client && window.matchMedia("(pointer: fine)").matches;
+const initParticleSystem = (): (() => void) | null => {
+  const canvas = starCanvas.value;
+  if (!canvas) return null;
 
-function handlePanelPointerMove(event: PointerEvent) {
-  if (!pointerHasPrecision()) return;
+  const ctx2d = canvas.getContext("2d");
+  if (!ctx2d) return null;
 
-  pendingPanelGlow = {
-    x: `${event.clientX}px`,
-    y: `${event.clientY}px`,
+  const section = sectionRef.value;
+  if (!section) return null;
+
+  let width = section.offsetWidth;
+  let height = section.offsetHeight;
+  canvas.width = width;
+  canvas.height = height;
+
+  let particles: Star[] = [];
+  let meteors: Meteor[] = [];
+  let animationFrameId: number | null = null;
+  let nextMeteorTime: number = Date.now() + Math.random() * 3000;
+
+  const pivotX = () => width;
+  const pivotY = () => height;
+
+  const initStars = () => {
+    particles = [];
+    meteors = [];
+    const maxDistance = Math.sqrt(width * width + height * height) * 1.1;
+    const circleArea = Math.PI * maxDistance * maxDistance;
+    const particleCount = Math.floor(circleArea / 22000);
+
+    for (let i = 0; i < particleCount; i++) {
+      particles.push({
+        distance: Math.sqrt(Math.random()) * maxDistance,
+        angle: Math.random() * Math.PI * 2,
+        speed: Math.random() * 0.0001 + 0.0001,
+        size: Math.random() * 1.2 + 0.3,
+        phase: Math.random() * Math.PI * 2,
+        twinkleSpeed: Math.random() * 0.02 + 0.005,
+        baseAlpha: Math.random() * 0.4 + 0.5,
+        variance: Math.random() * 0.2 + 0.2,
+      });
+    }
   };
 
-  if (panelGlowFrame) return;
+  const spawnMeteor = () => {
+    const baseSpeed = Math.random() * 3 + 4;
+    meteors.push({
+      x: Math.random() * width * 1.5,
+      y: -50,
+      vx: -baseSpeed * 1.0,
+      vy: baseSpeed * 1.5,
+      length: Math.random() * 400 + 350,
+      thickness: Math.random() * 1.2 + 1.2,
+      life: 0,
+      maxLife: 140 + Math.random() * 60,
+    });
+  };
 
-  panelGlowFrame = requestAnimationFrame(() => {
-    if (!pendingPanelGlow) {
-      panelGlowFrame = 0;
-      return;
+  const draw = () => {
+    if (!ctx2d) return;
+    ctx2d.clearRect(0, 0, width, height);
+
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      if (!p) continue;
+
+      p.phase += p.twinkleSpeed;
+      p.angle += p.speed;
+      const currentAlpha = Math.max(
+        0.15,
+        Math.min(1, p.baseAlpha + Math.sin(p.phase) * p.variance),
+      );
+      const x = pivotX() + Math.cos(p.angle) * p.distance;
+      const y = pivotY() + Math.sin(p.angle) * p.distance;
+
+      if (x > -10 && x < width + 10 && y > -10 && y < height + 10) {
+        ctx2d.beginPath();
+        ctx2d.arc(Math.round(x), Math.round(y), p.size, 0, Math.PI * 2);
+        ctx2d.fillStyle = `rgba(255, 255, 255, ${currentAlpha})`;
+        ctx2d.fill();
+      }
     }
 
-    document.querySelectorAll<HTMLElement>(".section-dots").forEach((el) => {
-      el.style.setProperty("--dot-glow-x", pendingPanelGlow!.x);
-      el.style.setProperty("--dot-glow-y", pendingPanelGlow!.y);
-      el.style.setProperty("--dot-glow-opacity", "1");
-    });
-    pendingPanelGlow = null;
-    panelGlowFrame = 0;
-  });
-}
+    const now = Date.now();
+    if (now > nextMeteorTime) {
+      const count = Math.random() < 0.15 ? 2 : 1;
+      for (let k = 0; k < count; k++) spawnMeteor();
+      nextMeteorTime = now + (Math.random() * 5000 + 1000);
+    }
 
-function handlePanelPointerLeave() {
-  if (panelGlowFrame) {
-    cancelAnimationFrame(panelGlowFrame);
-    panelGlowFrame = 0;
-  }
+    for (let i = meteors.length - 1; i >= 0; i--) {
+      const m = meteors[i];
+      if (!m) continue;
 
-  pendingPanelGlow = null;
-  document
-    .querySelectorAll<HTMLElement>(".section-dots")
-    .forEach((el) => el.style.setProperty("--dot-glow-opacity", "0"));
-}
+      m.x += m.vx;
+      m.y += m.vy;
+      m.life++;
+
+      const opacity = Math.max(0, 1 - m.life / m.maxLife);
+
+      if (
+        m.life >= m.maxLife ||
+        opacity <= 0 ||
+        m.x < -400 ||
+        m.y > height + 400
+      ) {
+        meteors.splice(i, 1);
+        continue;
+      }
+
+      const speedScale = Math.sqrt(m.vx * m.vx + m.vy * m.vy);
+      const tailX = m.x - (m.vx / speedScale) * m.length;
+      const tailY = m.y - (m.vy / speedScale) * m.length;
+
+      const gradient = ctx2d.createLinearGradient(m.x, m.y, tailX, tailY);
+      gradient.addColorStop(0, `rgba(255, 255, 255, ${opacity * 0.7})`);
+      gradient.addColorStop(1, `rgba(255, 255, 255, 0)`);
+
+      ctx2d.beginPath();
+      ctx2d.moveTo(m.x, m.y);
+      ctx2d.lineTo(tailX, tailY);
+      ctx2d.strokeStyle = gradient;
+      ctx2d.lineWidth = m.thickness;
+      ctx2d.lineCap = "round";
+      ctx2d.stroke();
+
+      ctx2d.beginPath();
+      ctx2d.arc(m.x, m.y, m.thickness * 1.5, 0, Math.PI * 2);
+      ctx2d.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+      ctx2d.fill();
+    }
+    animationFrameId = requestAnimationFrame(draw);
+  };
+
+  initStars();
+  draw();
+
+  const onResize = () => {
+    if (!section) return;
+    width = section.offsetWidth;
+    height = section.offsetHeight;
+    canvas.width = width;
+    canvas.height = height;
+    initStars();
+  };
+
+  window.addEventListener("resize", onResize);
+  return () => {
+    window.removeEventListener("resize", onResize);
+    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+  };
+};
 
 onMounted(async () => {
-  if (!sectionRef.value || prefersReducedMotion()) return;
+  if (!sectionRef.value) return;
+
+  if (!prefersReducedMotion()) {
+    cleanupCanvas = initParticleSystem();
+  }
+
+  if (prefersReducedMotion()) return;
 
   const { ScrollTrigger } = await import("gsap/ScrollTrigger");
   gsap.registerPlugin(ScrollTrigger);
@@ -291,13 +432,11 @@ onMounted(async () => {
         {
           keyframes: [
             {
-              backgroundColor: BG_COLOR_MID,
               "--dot-r": DOT_R_MID,
               duration: 0.6,
               ease: "power2.in",
             },
             {
-              backgroundColor: BG_COLOR_FINAL,
               "--dot-r": DOT_R_LARGE,
               duration: 0.8,
               ease: "power2.out",
@@ -404,8 +543,9 @@ onBeforeUnmount(() => {
   ctx?.revert();
   navOnDark.value = false;
 
-  if (panelGlowFrame) {
-    cancelAnimationFrame(panelGlowFrame);
+  if (cleanupCanvas) {
+    cleanupCanvas();
+    cleanupCanvas = null;
   }
 });
 </script>
@@ -436,9 +576,6 @@ onBeforeUnmount(() => {
   width: 100vw;
   margin-left: calc(50% - 50vw);
   margin-right: calc(50% - 50vw);
-  --dot-glow-x: 50%;
-  --dot-glow-y: 50%;
-  --dot-glow-opacity: 0;
   --dot-color: #000000;
   --dot-r: 1.8px;
 }
@@ -465,58 +602,6 @@ onBeforeUnmount(() => {
   opacity: 1;
 }
 
-.section-dots--glow {
-  background-image: radial-gradient(#1d1e18 2px, transparent 2px);
-  opacity: 0;
-  transition: opacity 220ms ease;
-  -webkit-mask-image: radial-gradient(
-    circle 165px at var(--dot-glow-x) var(--dot-glow-y),
-    black 0%,
-    rgba(0, 0, 0, 0.96) 22%,
-    rgba(0, 0, 0, 0.72) 52%,
-    transparent 78%
-  );
-  mask-image: radial-gradient(
-    circle 165px at var(--dot-glow-x) var(--dot-glow-y),
-    black 0%,
-    rgba(0, 0, 0, 0.96) 22%,
-    rgba(0, 0, 0, 0.72) 52%,
-    transparent 78%
-  );
-}
-
-@media (min-width: 768px) {
-  .section-dots {
-    background-size: 44px 44px;
-  }
-  .section-dots--glow {
-    -webkit-mask-image: radial-gradient(
-      circle 190px at var(--dot-glow-x) var(--dot-glow-y),
-      black 0%,
-      rgba(0, 0, 0, 0.96) 24%,
-      rgba(0, 0, 0, 0.72) 54%,
-      transparent 80%
-    );
-    mask-image: radial-gradient(
-      circle 190px at var(--dot-glow-x) var(--dot-glow-y),
-      black 0%,
-      rgba(0, 0, 0, 0.96) 24%,
-      rgba(0, 0, 0, 0.72) 54%,
-      transparent 80%
-    );
-  }
-}
-
-.section-dots--glow.is-active {
-  opacity: var(--dot-glow-opacity);
-}
-
-@media (pointer: coarse) {
-  .section-dots--glow {
-    display: none;
-  }
-}
-
 .reflection-photo-shell {
   container-type: inline-size;
 }
@@ -538,12 +623,6 @@ onBeforeUnmount(() => {
   src: url("~/assets/fonts/HelveticaforTarget-Bold.woff") format("woff");
   font-weight: 700;
   font-style: normal;
-}
-
-.reflection-panel {
-  --dot-glow-x: 50%;
-  --dot-glow-y: 50%;
-  --dot-glow-opacity: 0;
 }
 
 @media (min-width: 768px) {
