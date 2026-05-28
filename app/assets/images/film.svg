@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="716"
+     height="914"
+     viewBox="0 0 716 914"
+     preserveAspectRatio="none"
+     role="img"
+     aria-label="Simple two-frame vertical film strip with evenly spaced square sprocket holes">
+  <defs>
+    <mask id="film-cutouts">
+      <rect width="716" height="914" fill="white"/>
+
+      <!-- Main transparent cutouts -->
+      <rect x="56" y="31"  width="604" height="412" rx="20" ry="20" fill="black"/>
+      <rect x="56" y="477" width="604" height="399" rx="20" ry="20" fill="black"/>
+
+      <!-- Left square sprocket holes: evenly spaced, equal top/bottom margin -->
+      <rect x="18" y="30"         width="24" height="24" rx="3" ry="3" fill="black"/>
+      <rect x="18" y="99.1667"    width="24" height="24" rx="3" ry="3" fill="black"/>
+      <rect x="18" y="168.3333"   width="24" height="24" rx="3" ry="3" fill="black"/>
+      <rect x="18" y="237.5"      width="24" height="24" rx="3" ry="3" fill="black"/>
+      <rect x="18" y="306.6667"   width="24" height="24" rx="3" ry="3" fill="black"/>
+      <rect x="18" y="375.8333"   width="24" height="24" rx="3" ry="3" fill="black"/>
+      <rect x="18" y="445"        width="24" height="24" rx="3" ry="3" fill="black"/>
+      <rect x="18" y="514.1667"   width="24" height="24" rx="3" ry="3" fill="black"/>
+      <rect x="18" y="583.3333"   width="24" height="24" rx="3" ry="3" fill="black"/>
+      <rect x="18" y="652.5"      width="24" height="24" rx="3" ry="3" fill="black"/>
+      <rect x="18" y="721.6667"   width="24" height="24" rx="3" ry="3" fill="black"/>
+      <rect x="18" y="790.8333"   width="24" height="24" rx="3" ry="3" fill="black"/>
+      <rect x="18" y="860"        width="24" height="24" rx="3" ry="3" fill="black"/>
+
+      <!-- Right square sprocket holes: evenly spaced, equal top/bottom margin -->
+      <rect x="674" y="30"        width="24" height="24" rx="3" ry="3" fill="black"/>
+      <rect x="674" y="99.1667"   width="24" height="24" rx="3" ry="3" fill="black"/>
+      <rect x="674" y="168.3333"  width="24" height="24" rx="3" ry="3" fill="black"/>
+      <rect x="674" y="237.5"     width="24" height="24" rx="3" ry="3" fill="black"/>
+      <rect x="674" y="306.6667"  width="24" height="24" rx="3" ry="3" fill="black"/>
+      <rect x="674" y="375.8333"  width="24" height="24" rx="3" ry="3" fill="black"/>
+      <rect x="674" y="445"       width="24" height="24" rx="3" ry="3" fill="black"/>
+      <rect x="674" y="514.1667"  width="24" height="24" rx="3" ry="3" fill="black"/>
+      <rect x="674" y="583.3333"  width="24" height="24" rx="3" ry="3" fill="black"/>
+      <rect x="674" y="652.5"     width="24" height="24" rx="3" ry="3" fill="black"/>
+      <rect x="674" y="721.6667"  width="24" height="24" rx="3" ry="3" fill="black"/>
+      <rect x="674" y="790.8333"  width="24" height="24" rx="3" ry="3" fill="black"/>
+      <rect x="674" y="860"       width="24" height="24" rx="3" ry="3" fill="black"/>
+    </mask>
+  </defs>
+
+  <rect width="716" height="914" fill="#000000" mask="url(#film-cutouts)"/>
+</svg>
