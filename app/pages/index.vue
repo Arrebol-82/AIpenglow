@@ -8,7 +8,6 @@ import SectionSoul from "~/components/site/soul/SectionSoul.vue";
 import SectionCode from "~/components/site/code/SectionCode.vue";
 import InspirationNowFilmStage from "~/components/site/inspiration-now/InspirationNowFilmStage.vue";
 import WorksArchiveStage from "~/components/site/works/WorksArchiveStage.vue";
-import NowFooterStage from "~/components/site/now/NowFooterStage.vue";
 
 let revealAnimationContext: gsap.Context | null = null;
 let destroyPageScroll: (() => void) | null = null;
@@ -123,7 +122,7 @@ onBeforeUnmount(() => {
         </div>
 
         <main
-          class="paper-main relative w-full px-6 pt-0 pb-24 md:px-12 md:pt-0 md:pb-28 xl:px-[60px]"
+          class="paper-main relative w-full px-6 pt-0 pb-0 md:px-12 md:pt-0 md:pb-0 xl:px-[60px]"
         >
           <div class="relative z-10 space-y-36 md:space-y-40">
             <SectionMe />
@@ -155,8 +154,6 @@ onBeforeUnmount(() => {
         </main>
       </div>
     </div>
-
-    <NowFooterStage />
   </div>
 </template>
 

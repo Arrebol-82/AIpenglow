@@ -16,6 +16,7 @@
         <SectionInspiration />
       </div>
 
+      <!-- 唯一的 Now 页面 -->
       <div ref="nowWrapperRef" class="inspiration-film-stage__now">
         <div class="inspiration-film-stage__now-inner">
           <SectionNow v-if="showNow" />
@@ -29,6 +30,11 @@
         aria-hidden="true"
         class="inspiration-film-stage__film-overlay"
       />
+
+      <!-- Footer 覆盖层 -->
+      <div ref="footerCoverRef" class="inspiration-film-stage__footer-cover">
+        <TheFooter />
+      </div>
     </div>
   </div>
 </template>
@@ -37,6 +43,7 @@
 import { ref, onMounted, onBeforeUnmount } from "vue";
 import { gsap } from "gsap";
 
+import TheFooter from "~/components/layout/TheFooter.vue";
 import SectionInspiration from "~/components/site/inspiration/SectionInspiration.vue";
 import SectionNow from "~/components/site/now/SectionNow.vue";
 import filmSvg from "~/assets/images/film.svg";
@@ -64,6 +71,7 @@ const pinnedRef = ref<HTMLElement | null>(null);
 const inspirationWrapperRef = ref<HTMLElement | null>(null);
 const nowWrapperRef = ref<HTMLElement | null>(null);
 const filmOverlayRef = ref<HTMLImageElement | null>(null);
+const footerCoverRef = ref<HTMLElement | null>(null);
 
 let ctx: gsap.Context | null = null;
 
@@ -93,7 +101,8 @@ function setupAnimation() {
     !pinnedRef.value ||
     !inspirationWrapperRef.value ||
     !nowWrapperRef.value ||
-    !filmOverlayRef.value
+    !filmOverlayRef.value ||
+    !footerCoverRef.value
   ) {
     return;
   }
@@ -102,8 +111,9 @@ function setupAnimation() {
     const inspirationEl = inspirationWrapperRef.value;
     const nowEl = nowWrapperRef.value;
     const filmEl = filmOverlayRef.value;
+    const footerEl = footerCoverRef.value;
 
-    if (!inspirationEl || !nowEl || !filmEl) return;
+    if (!inspirationEl || !nowEl || !filmEl || !footerEl) return;
 
     gsap.set(inspirationEl, {
       scale: 1,
@@ -126,17 +136,23 @@ function setupAnimation() {
       transformOrigin: "50% 25%",
     });
 
+    gsap.set(footerEl, {
+      y: "100vh",
+      opacity: 1,
+    });
+
     const tl = gsap.timeline({
       scrollTrigger: {
         trigger: outerRef.value,
         start: "top top",
 
-        // 整体转场长度：
-        // 1. Ins 进入胶卷
-        // 2. 胶卷跨页移动到 Now
-        // 3. SVG 短暂停住
-        // 4. Now 释放，SVG 放大离场
-        end: "+=160%",
+        /*
+         * 这里拉长 pin 的距离：
+         * 前面：Ins -> Now 胶卷转场
+         * 中间：Now 恢复全屏
+         * 后面：Now 固定，Footer 覆盖
+         */
+        end: "+=260%",
 
         pin: pinnedRef.value,
         pinSpacing: true,
@@ -171,9 +187,7 @@ function setupAnimation() {
 
     /*
      * 第二段：
-     * SVG 整体上移。
-     * 当 y 到 -100vh 时，
-     * SVG 底部刚好贴住视口底部。
+     * SVG 上移，Now 进入第二帧。
      */
     tl.to(
       filmEl,
@@ -210,7 +224,7 @@ function setupAnimation() {
 
     /*
      * 第三段：
-     * SVG 底部贴住视口底部后，先固定停住一小段。
+     * SVG 底部贴住视口底部，短暂停住。
      */
     tl.to(
       filmEl,
@@ -237,11 +251,9 @@ function setupAnimation() {
     );
 
     /*
-     * 离场前：
-     * 把 SVG 的缩放中心切到第二帧中心。
-     *
-     * 进场时中心在上半部分：50% 25%
-     * 离场时中心在下半部分：50% 75%
+     * 第四段：
+     * Now 恢复全屏。
+     * SVG 参考 Ins 进场方式反向放大离场。
      */
     tl.set(
       filmEl,
@@ -251,11 +263,6 @@ function setupAnimation() {
       1.08,
     );
 
-    /*
-     * 第四段：
-     * 释放 Now 页面。
-     * Now 从胶卷第二帧 cutout 里的缩小状态恢复到原始大小。
-     */
     tl.to(
       nowEl,
       {
@@ -268,20 +275,6 @@ function setupAnimation() {
       1.08,
     );
 
-    /*
-     * 第五段：
-     * SVG 参考 Ins 进场方式反向离场。
-     *
-     * Ins 进场：
-     * SVG scale: startScale -> 1
-     *
-     * Now 离场：
-     * SVG scale: 1 -> startScale
-     *
-     * 注意：
-     * 这里不再让 SVG 继续 y: -200vh 往上滑走。
-     * 它保持在 y: -100vh，然后以第二帧为中心放大离场。
-     */
     tl.to(
       filmEl,
       {
@@ -292,6 +285,42 @@ function setupAnimation() {
         ease: "none",
       },
       1.08,
+    );
+
+    /*
+     * 第五段：
+     * 这就是 Now 的 pin 效果。
+     *
+     * 注意：
+     * 这里不是重新 pin nowEl。
+     * 而是因为 pinnedRef 已经固定，
+     * 所以只要 nowEl 保持 y: 0 / scale: 1，
+     * 视觉上 Now 就是固定不动的。
+     */
+    tl.to(
+      nowEl,
+      {
+        scale: 1,
+        y: 0,
+        opacity: 1,
+        duration: 0.55,
+        ease: "none",
+      },
+      1.53,
+    );
+
+    /*
+     * 第六段：
+     * Footer 从底部往上覆盖固定住的 Now 页面。
+     */
+    tl.to(
+      footerEl,
+      {
+        y: 0,
+        duration: 0.75,
+        ease: "none",
+      },
+      1.75,
     );
   }, outerRef.value);
 }
@@ -345,10 +374,6 @@ onBeforeUnmount(() => {
   margin-left: calc(50% - 50vw);
 }
 
-/*
- * 固定舞台只保留 100vh。
- * SVG 是 200vh，由 GSAP 控制它跨越两个页面。
- */
 .inspiration-film-stage__pinned {
   position: relative;
   width: 100vw;
@@ -359,6 +384,7 @@ onBeforeUnmount(() => {
 .inspiration-film-stage__inspiration {
   position: absolute;
   inset: 0;
+  z-index: 1;
   width: 100%;
   height: 100vh;
   will-change: transform, opacity;
@@ -367,20 +393,24 @@ onBeforeUnmount(() => {
 .inspiration-film-stage__now {
   position: absolute;
   inset: 0;
+  z-index: 2;
   width: 100%;
   height: 100vh;
+  background: #f6f1e7;
   will-change: transform, opacity;
 }
 
-/*
- * film.svg 跨两个页面：
- * 第一帧对应 Inspiration
- * 第二帧对应 Now
- */
+.inspiration-film-stage__now-inner {
+  width: 100%;
+  height: 100%;
+  padding-inline: 1.5rem;
+}
+
 .inspiration-film-stage__film-overlay {
   position: absolute;
   top: 0;
   left: 0;
+  z-index: 5;
   width: 100vw;
   height: 200vh;
   object-fit: fill;
@@ -390,10 +420,13 @@ onBeforeUnmount(() => {
   will-change: transform, opacity;
 }
 
-.inspiration-film-stage__now-inner {
-  width: 100%;
-  height: 100%;
-  padding-inline: 1.5rem;
+.inspiration-film-stage__footer-cover {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  width: 100vw;
+  min-height: 100vh;
+  will-change: transform;
 }
 
 @media (min-width: 768px) {
