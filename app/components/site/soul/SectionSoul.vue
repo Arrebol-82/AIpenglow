@@ -1,5 +1,6 @@
 <template>
   <section
+    id="soul"
     ref="sectionRef"
     class="section-philosophy bg-[#f6f1e7] text-white pt-24 px-6 md:px-12 lg:px-24 min-h-screen relative z-30 overflow-hidden font-sans"
   >
@@ -16,7 +17,7 @@
     ></div>
 
     <div
-      class="soul-watermark absolute right-0 top-[1.875rem] opacity-80 pointer-events-none select-none md:top-[2.375rem]"
+      class="soul-watermark absolute right-0 top-[1.875rem] z-[3] opacity-80 pointer-events-none select-none md:top-[2.375rem]"
     >
       <div
         class="watermark-text watermark-text--soul whitespace-nowrap tracking-[-0.03em] text-[6.5rem] md:text-[10rem] lg:text-[15rem]"

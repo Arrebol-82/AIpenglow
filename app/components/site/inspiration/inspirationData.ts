@@ -11,10 +11,21 @@ export const BOOK_PROGRESS_LABEL = "阅读进度";
 
 export const BOOK_PROGRESS_VALUE = 45;
 
-export const FILM_SECTION_HEADING = "最近看过的电影";
+export const FILM_SECTION_HEADING = "心灵奇旅";
 
-export const FILM_NAME = "片名：幽灵公主";
+export const FILM_QUOTE = "但 我能确定的是  我要活好 生命中的每一分钟";
 
-export const FILM_FEEL_LINE_1 = "感受一：生きろ / ikiro";
+export const FAVORITE_SONG = "AIready Gone";
 
-export const FILM_FEEL_LINE_2 = "感受二：很震撼，很贴近";
+export const FAVORITE_BOOK = "《杀死一只知更鸟》";
+
+export const FAVORITE_BOOK_QUOTE =
+  "有一种东西不能遵循从众原则，那就是人的良心。";
+
+export const FAVORITE_FILM = "幽灵公主";
+
+export const FAVORITE_FILM_QUOTE_1 = "活下去/生きろ，你很美";
+
+export const FAVORITE_FILM_QUOTE_2 = "用澄澈无暇的眼睛看清事实";
+
+export const RECENT_FILM = "千与千寻";

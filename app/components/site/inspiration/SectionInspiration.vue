@@ -75,7 +75,9 @@
             class="pointer-events-none absolute right-0 top-0 z-0 hidden w-6 translate-x-1/2 -translate-y-1/2 select-none opacity-60 lg:block"
           />
 
-          <div class="relative z-10 flex flex-col gap-6 md:flex-row md:gap-12">
+          <div
+            class="relative z-10 flex flex-col gap-6 opacity-100 transition-opacity duration-300 md:flex-row md:gap-12 group-hover:opacity-0"
+          >
             <div
               class="flex flex-col justify-center md:min-h-[100px] md:w-5/12 md:pt-10"
             >
@@ -145,6 +147,21 @@
               </div>
             </div>
           </div>
+
+          <div
+            class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+          >
+            <div class="text-center">
+              <p class="font-serif text-sm tracking-widest text-[#1D1E18]/60">
+                最爱的歌曲
+              </p>
+              <p
+                class="mt-2 font-serif text-3xl font-bold tracking-wide text-[#111] md:text-4xl"
+              >
+                {{ FAVORITE_SONG }}
+              </p>
+            </div>
+          </div>
         </div>
 
         <div
@@ -160,7 +177,9 @@
             </span>
           </div>
 
-          <div class="relative z-10 flex flex-col gap-6 md:flex-row md:gap-12">
+          <div
+            class="relative z-10 flex flex-col gap-6 opacity-100 transition-opacity duration-300 md:flex-row md:gap-12 group-hover:opacity-0"
+          >
             <div class="flex flex-col justify-center md:w-5/12">
               <h3
                 class="font-serif text-3xl font-bold tracking-wide text-[#111] md:text-4xl"
@@ -211,6 +230,26 @@
               </div>
             </div>
           </div>
+
+          <div
+            class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+          >
+            <div class="max-w-md text-center">
+              <p class="font-serif text-sm tracking-widest text-[#1D1E18]/60">
+                最爱的书本
+              </p>
+              <p
+                class="mt-2 font-serif text-3xl font-bold tracking-wide text-[#111] md:text-4xl"
+              >
+                {{ FAVORITE_BOOK }}
+              </p>
+              <p
+                class="mt-4 font-serif text-[15px] italic leading-relaxed text-[#1D1E18]/80"
+              >
+                "{{ FAVORITE_BOOK_QUOTE }}"
+              </p>
+            </div>
+          </div>
         </div>
 
         <div class="group relative py-[1.875rem] md:py-[2.875rem]">
@@ -231,35 +270,53 @@
             class="pointer-events-none absolute bottom-0 right-0 z-0 hidden w-6 translate-x-1/2 translate-y-1/2 select-none opacity-60 lg:block"
           />
 
-          <div class="relative z-10 flex flex-col gap-6 md:flex-row md:gap-12">
+          <div
+            class="relative z-10 flex flex-col gap-6 opacity-100 transition-opacity duration-300 md:flex-row md:gap-12 group-hover:opacity-0"
+          >
             <div class="flex flex-col justify-center md:w-5/12">
-              <h3
-                class="font-serif text-lg font-medium tracking-[0.04em] text-[#1D1E18]/72 md:text-xl"
+              <p
+                class="mb-3 font-serif text-sm font-bold tracking-wide text-[#1D1E18]/60"
+              >
+                最近看过
+              </p>
+              <p
+                class="font-serif text-3xl font-bold tracking-wide text-[#111] md:text-4xl"
               >
                 {{ FILM_SECTION_HEADING }}
-              </h3>
-              <p
-                class="mt-2 text-[17px] font-semibold text-[#111] md:text-[18px]"
-              >
-                {{ FILM_NAME }}
               </p>
             </div>
 
-            <div class="flex flex-col justify-end gap-3 pb-2 md:w-7/12">
-              <div
-                class="flex w-max items-center gap-3 border-b border-[#1D1E18]/20 pb-2 pr-6"
+            <div class="flex flex-col justify-center md:w-7/12">
+              <p
+                class="font-serif text-[15px] italic leading-relaxed text-[#1D1E18]/80"
               >
-                <span class="text-[13px] font-medium text-[#1D1E18]/80">
-                  {{ FILM_FEEL_LINE_1 }}
-                </span>
-              </div>
-              <div
-                class="flex w-max items-center gap-3 border-b border-[#1D1E18]/20 pb-2 pr-6"
+                "{{ FILM_QUOTE }}"
+              </p>
+            </div>
+          </div>
+
+          <div
+            class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+          >
+            <div class="max-w-md text-center">
+              <p class="font-serif text-sm tracking-widest text-[#1D1E18]/60">
+                最爱的电影
+              </p>
+              <p
+                class="mt-2 font-serif text-3xl font-bold tracking-wide text-[#111] md:text-4xl"
               >
-                <span class="text-[13px] font-medium text-[#1D1E18]/80">
-                  {{ FILM_FEEL_LINE_2 }}
-                </span>
-              </div>
+                {{ FAVORITE_FILM }}
+              </p>
+              <p
+                class="mt-4 font-serif text-[15px] italic leading-relaxed text-[#1D1E18]/80"
+              >
+                "{{ FAVORITE_FILM_QUOTE_1 }}"
+              </p>
+              <p
+                class="mt-2 font-serif text-[15px] italic leading-relaxed text-[#1D1E18]/80"
+              >
+                "{{ FAVORITE_FILM_QUOTE_2 }}"
+              </p>
             </div>
           </div>
         </div>
@@ -287,9 +344,14 @@ import {
   BOOK_PROGRESS_LABEL,
   BOOK_PROGRESS_VALUE,
   FILM_SECTION_HEADING,
-  FILM_NAME,
-  FILM_FEEL_LINE_1,
-  FILM_FEEL_LINE_2,
+  FILM_QUOTE,
+  FAVORITE_SONG,
+  FAVORITE_BOOK,
+  FAVORITE_BOOK_QUOTE,
+  FAVORITE_FILM,
+  FAVORITE_FILM_QUOTE_1,
+  FAVORITE_FILM_QUOTE_2,
+  RECENT_FILM,
 } from "./inspirationData";
 import {
   POLL_DELAY_ACTIVE,
