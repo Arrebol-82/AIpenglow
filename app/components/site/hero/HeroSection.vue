@@ -20,6 +20,7 @@ import {
   HERO_DOCK,
 } from "./heroAnimationConfig";
 import { HERO_RAIN } from "./heroRainConfig";
+import { preloaderFinished } from "~/composables/useAppPreloader";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -83,6 +84,7 @@ let drops: Raindrop[] = [];
 let viewportWidth = 0;
 let viewportHeight = 0;
 let isHeroTitleDocked = false;
+let isComponentMounted = false;
 
 // ---------------------------------------------------------------------------
 // Subtitle word splitting
@@ -540,13 +542,18 @@ const setupHeroTitleAnimation = () => {
 // ---------------------------------------------------------------------------
 // Lifecycle
 // ---------------------------------------------------------------------------
-onMounted(() => {
+onMounted(async () => {
+  isComponentMounted = true;
   heroIntroComplete.value = false;
   navbarIntroComplete.value = false;
   isHeroTitleDocked = false;
   resizeCanvas();
   updateParallax();
   renderRain();
+
+  await preloaderFinished;
+  if (!isComponentMounted) return;
+
   setupHeroTitleAnimation();
 
   resizeObserver = new ResizeObserver(() => {
@@ -568,6 +575,7 @@ watch(navbarIntroComplete, async (isComplete) => {
 });
 
 onBeforeUnmount(() => {
+  isComponentMounted = false;
   window.cancelAnimationFrame(animationFrameId);
   resizeObserver?.disconnect();
   heroTitleAnimationContext?.revert();

@@ -29,7 +29,7 @@ let capsuleTween: gsap.core.Tween | null = null;
 let colorSwitchCompleteTimer: ReturnType<typeof setTimeout> | null = null;
 let homeEdgeTrigger: import("gsap/ScrollTrigger").ScrollTrigger | null = null;
 
-const smoothScrollTo = useSmoothAnchor();
+const { playAnchorTransition } = usePageTransition();
 
 const getCapsuleTargetWidth = () => {
   if (!brandRef.value || !linksRef.value) {
@@ -139,7 +139,7 @@ const handleLinkClick = (
 ) => {
   event.preventDefault();
   activeSection.value = link.id;
-  smoothScrollTo(link.href);
+  playAnchorTransition(link.href);
 };
 
 const handleResize = () => {

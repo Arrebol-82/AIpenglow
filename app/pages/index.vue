@@ -2,6 +2,8 @@
 import { gsap } from "gsap";
 import topEdgeImage from "~/assets/images/main.webp";
 import TheNavbar from "~/components/layout/TheNavbar.vue";
+import PageTransitionOverlay from "~/components/transition/PageTransitionOverlay.vue";
+import AppPreloader from "~/components/transition/AppPreloader.vue";
 import HeroSection from "~/components/site/hero/HeroSection.vue";
 import SectionMe from "~/components/site/me/SectionMe.vue";
 import SectionSoul from "~/components/site/soul/SectionSoul.vue";
@@ -14,8 +16,25 @@ let destroyPageScroll: (() => void) | null = null;
 
 const revealStageRef = ref<HTMLElement | null>(null);
 const heroLayerRef = ref<HTMLElement | null>(null);
+const preloaderDone = ref(false);
 
-onMounted(async () => {
+useHead({
+  script: [
+    {
+      key: "alpenglow-preloader-seen-guard",
+      tagPosition: "head",
+      innerHTML:
+        'try{if(sessionStorage.getItem("alpenglow-preloader-seen")==="1"){document.documentElement.classList.add("preloader-seen")}}catch(e){}',
+    },
+  ],
+});
+
+function onPreloaderReady() {
+  preloaderDone.value = true;
+  initRevealScroll();
+}
+
+async function initRevealScroll() {
   if (!revealStageRef.value || !heroLayerRef.value) {
     return;
   }
@@ -90,7 +109,7 @@ onMounted(async () => {
   // single requestAnimationFrame ensures the final layout is measured
   // and all pin spacers are recalculated, preventing stale offsets.
   requestAnimationFrame(() => pageScroll.refresh());
-});
+}
 
 onBeforeUnmount(() => {
   revealAnimationContext?.revert();
@@ -105,6 +124,10 @@ onBeforeUnmount(() => {
     <div class="grain-overlay"></div>
 
     <TheNavbar />
+
+    <PageTransitionOverlay />
+
+    <AppPreloader @ready="onPreloaderReady" />
 
     <div ref="revealStageRef" class="home-reveal-stage">
       <div ref="heroLayerRef" class="home-hero-layer">
