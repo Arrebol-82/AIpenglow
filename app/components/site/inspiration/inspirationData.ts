@@ -11,9 +11,9 @@ export const BOOK_PROGRESS_LABEL = "阅读进度";
 
 export const BOOK_PROGRESS_VALUE = 45;
 
-export const FILM_SECTION_HEADING = "心灵奇旅";
+export const FILM_SECTION_HEADING = "魔女宅急便";
 
-export const FILM_QUOTE = "但 我能确定的是  我要活好 生命中的每一分钟";
+export const FILM_QUOTE = "内心 - 停一停";
 
 export const FAVORITE_SONG = "AIready Gone";
 

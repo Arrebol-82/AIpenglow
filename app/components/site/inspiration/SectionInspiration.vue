@@ -49,6 +49,7 @@
         ref="rightColRef"
         class="relative z-0 flex w-full flex-col lg:col-span-6 lg:ml-auto lg:w-[calc(100%-3.125rem)] lg:pl-8 xl:pl-12"
       >
+        <!-- MUSIC -->
         <div
           class="group relative border-b border-[#1D1E18]/10 py-[1.875rem] md:py-[2.875rem]"
         >
@@ -158,12 +159,13 @@
               <p
                 class="mt-2 font-serif text-3xl font-bold tracking-wide text-[#111] md:text-4xl"
               >
-                {{ FAVORITE_SONG }}
+                {{ favoriteSong }}
               </p>
             </div>
           </div>
         </div>
 
+        <!-- BOOK -->
         <div
           class="group relative border-b border-[#1D1E18]/10 py-[1.875rem] md:py-[2.875rem]"
         >
@@ -184,7 +186,7 @@
               <h3
                 class="font-serif text-3xl font-bold tracking-wide text-[#111] md:text-4xl"
               >
-                {{ BOOK_TITLE }}
+                {{ bookTitle }}
               </h3>
             </div>
 
@@ -192,7 +194,7 @@
               <div
                 class="col-span-2 flex justify-end font-mono text-[9px] tracking-widest text-[#1D1E18]/60"
               >
-                <div class="text-right">{{ BOOK_READING_DATE }}</div>
+                <div class="text-right">{{ bookReadingDate }}</div>
               </div>
 
               <div class="col-span-2">
@@ -204,7 +206,7 @@
                 <p
                   class="font-serif text-[13px] italic leading-relaxed text-[#1D1E18]/80"
                 >
-                  {{ BOOK_INSIGHT_TEXT }}
+                  {{ bookInsightText }}
                 </p>
               </div>
 
@@ -241,17 +243,24 @@
               <p
                 class="mt-2 font-serif text-3xl font-bold tracking-wide text-[#111] md:text-4xl"
               >
-                {{ FAVORITE_BOOK }}
+                {{ favoriteBook }}
               </p>
               <p
                 class="mt-4 font-serif text-[15px] italic leading-relaxed text-[#1D1E18]/80"
               >
-                "{{ FAVORITE_BOOK_QUOTE }}"
+                "{{ favoriteBookQuote1 }}"
+              </p>
+              <p
+                v-if="favoriteBookQuote2"
+                class="mt-2 font-serif text-[15px] italic leading-relaxed text-[#1D1E18]/80"
+              >
+                "{{ favoriteBookQuote2 }}"
               </p>
             </div>
           </div>
         </div>
 
+        <!-- FILM -->
         <div class="group relative py-[1.875rem] md:py-[2.875rem]">
           <div
             class="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden select-none"
@@ -282,7 +291,7 @@
               <p
                 class="font-serif text-3xl font-bold tracking-wide text-[#111] md:text-4xl"
               >
-                {{ FILM_SECTION_HEADING }}
+                {{ filmSectionHeading }}
               </p>
             </div>
 
@@ -290,7 +299,7 @@
               <p
                 class="font-serif text-[15px] italic leading-relaxed text-[#1D1E18]/80"
               >
-                "{{ FILM_QUOTE }}"
+                "{{ filmQuote }}"
               </p>
             </div>
           </div>
@@ -305,17 +314,18 @@
               <p
                 class="mt-2 font-serif text-3xl font-bold tracking-wide text-[#111] md:text-4xl"
               >
-                {{ FAVORITE_FILM }}
+                {{ favoriteFilm }}
               </p>
               <p
                 class="mt-4 font-serif text-[15px] italic leading-relaxed text-[#1D1E18]/80"
               >
-                "{{ FAVORITE_FILM_QUOTE_1 }}"
+                "{{ favoriteFilmQuote1 }}"
               </p>
               <p
+                v-if="favoriteFilmQuote2"
                 class="mt-2 font-serif text-[15px] italic leading-relaxed text-[#1D1E18]/80"
               >
-                "{{ FAVORITE_FILM_QUOTE_2 }}"
+                "{{ favoriteFilmQuote2 }}"
               </p>
             </div>
           </div>
@@ -335,7 +345,12 @@ import {
   watch,
 } from "vue";
 import { gsap } from "gsap";
-import type { RecentTrack, LastFmState } from "./inspirationTypes";
+import type {
+  RecentTrack,
+  LastFmState,
+  InspirationContent,
+  InspirationApiResponse,
+} from "./inspirationTypes";
 import {
   BOOK_TITLE,
   BOOK_READING_DATE,
@@ -351,7 +366,6 @@ import {
   FAVORITE_FILM,
   FAVORITE_FILM_QUOTE_1,
   FAVORITE_FILM_QUOTE_2,
-  RECENT_FILM,
 } from "./inspirationData";
 import {
   POLL_DELAY_ACTIVE,
@@ -380,6 +394,94 @@ const { data: lastfmData, refresh } = useFetch<LastFmState>("/api/lastfm", {
   }),
 });
 
+const defaultInspirationContent: InspirationContent = {
+  music: {
+    favoriteSong: FAVORITE_SONG,
+  },
+  book: {
+    currentBook: BOOK_TITLE,
+    insight: BOOK_INSIGHT_TEXT,
+    progress: BOOK_PROGRESS_VALUE,
+    readingTime: BOOK_READING_DATE,
+    favoriteBook: FAVORITE_BOOK,
+    favoriteBookQuote1: FAVORITE_BOOK_QUOTE,
+    favoriteBookQuote2: "",
+  },
+  film: {
+    currentFilm: FILM_SECTION_HEADING,
+    filmQuote: FILM_QUOTE,
+    favoriteFilm: FAVORITE_FILM,
+    favoriteFilmQuote1: FAVORITE_FILM_QUOTE_1,
+    favoriteFilmQuote2: FAVORITE_FILM_QUOTE_2,
+  },
+};
+
+const { data: inspirationData } = useFetch<InspirationApiResponse | null>(
+  "/api/admin/inspiration",
+  {
+    key: "section-inspiration-content",
+    server: false,
+    lazy: true,
+    default: () => null,
+  },
+);
+
+const inspirationContent = computed(() => {
+  return inspirationData.value?.content ?? defaultInspirationContent;
+});
+
+const favoriteSong = computed(() => {
+  return inspirationContent.value.music.favoriteSong;
+});
+
+const bookTitle = computed(() => {
+  return inspirationContent.value.book.currentBook;
+});
+
+const bookReadingDate = computed(() => {
+  return inspirationContent.value.book.readingTime;
+});
+
+const bookInsightText = computed(() => {
+  return inspirationContent.value.book.insight;
+});
+
+const bookProgress = computed(() => {
+  return inspirationContent.value.book.progress;
+});
+
+const favoriteBook = computed(() => {
+  return inspirationContent.value.book.favoriteBook;
+});
+
+const favoriteBookQuote1 = computed(() => {
+  return inspirationContent.value.book.favoriteBookQuote1;
+});
+
+const favoriteBookQuote2 = computed(() => {
+  return inspirationContent.value.book.favoriteBookQuote2?.trim() ?? "";
+});
+
+const filmSectionHeading = computed(() => {
+  return inspirationContent.value.film.currentFilm;
+});
+
+const filmQuote = computed(() => {
+  return inspirationContent.value.film.filmQuote;
+});
+
+const favoriteFilm = computed(() => {
+  return inspirationContent.value.film.favoriteFilm;
+});
+
+const favoriteFilmQuote1 = computed(() => {
+  return inspirationContent.value.film.favoriteFilmQuote1;
+});
+
+const favoriteFilmQuote2 = computed(() => {
+  return inspirationContent.value.film.favoriteFilmQuote2?.trim() ?? "";
+});
+
 const isPageVisible = ref(true);
 const recentTrack = computed(() => lastfmData.value?.track ?? null);
 const activeTrack = computed(() =>
@@ -389,7 +491,6 @@ const canPoll = computed(() => isPageVisible.value);
 const pollDelay = computed(() =>
   activeTrack.value ? POLL_DELAY_ACTIVE : POLL_DELAY_IDLE,
 );
-const bookProgress = BOOK_PROGRESS_VALUE;
 
 let recentTrackRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 let musicTitleResizeObserver: ResizeObserver | null = null;
@@ -450,7 +551,7 @@ const updateMusicTitleOverflow = () => {
 
   if (!hasOverflow) {
     musicTitleScrollDistance.value = 0;
-    musicTitleScrollDuration.value = 12; /* default */
+    musicTitleScrollDuration.value = 12;
     return;
   }
 

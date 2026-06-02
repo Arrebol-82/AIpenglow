@@ -29,10 +29,18 @@ export default defineNuxtConfig({
     lastfmApiKey: process.env.LASTFM_API_KEY || "",
     lastfmUser: process.env.LASTFM_USER || "",
     lastfmEndpoint: process.env.LASTFM_ENDPOINT || "",
+
+    // 只能在 server/api 使用，不能暴露到前端
+    supabaseSecretKey: process.env.SUPABASE_SECRET_KEY || "",
+
+    public: {
+      supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL || "",
+      supabasePublishableKey:
+        process.env.NUXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "",
+    },
   },
   image: {
-    // 如果你以后用 Cloudflare 或外部图床，可以在这里配置
-    format: ["webp", "avif", "jpeg"], // 优先使用 webp
+    format: ["webp", "avif", "jpeg"],
   },
   app: {
     head: {

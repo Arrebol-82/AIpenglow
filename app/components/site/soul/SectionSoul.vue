@@ -4,12 +4,14 @@
     ref="sectionRef"
     class="section-philosophy bg-[#f6f1e7] text-white pt-24 px-6 md:px-12 lg:px-24 min-h-screen relative z-30 overflow-hidden font-sans"
   >
-    <canvas
-      ref="starCanvas"
-      class="absolute inset-0 w-full h-full pointer-events-none"
+    <div
+      ref="starLayerRef"
+      class="absolute inset-0 h-full w-full pointer-events-none"
       style="z-index: 2; opacity: 0"
       aria-hidden="true"
-    ></canvas>
+    >
+      <AdminStarCanvas v-if="shouldRenderStars" />
+    </div>
 
     <div
       class="soul-black-overlay absolute inset-0 bg-black pointer-events-none"
@@ -127,6 +129,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { gsap } from "gsap";
+import AdminStarCanvas from "~/components/transition/AdminStarCanvas.vue";
 import {
   SOUL_TITLE,
   SOUL_PARAGRAPH_1_LABEL,
@@ -141,202 +144,28 @@ import {
 } from "./soulData";
 import { SCROLL_START, SCROLL_END } from "./soulConstants";
 
-interface Star {
-  distance: number;
-  angle: number;
-  speed: number;
-  size: number;
-  phase: number;
-  twinkleSpeed: number;
-  baseAlpha: number;
-  variance: number;
-}
-
-interface Meteor {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  length: number;
-  thickness: number;
-  life: number;
-  maxLife: number;
-}
-
 const sectionRef = ref<HTMLElement | null>(null);
 const imageCardRef = ref<HTMLElement | null>(null);
-const starCanvas = ref<HTMLCanvasElement | null>(null);
+const starLayerRef = ref<HTMLElement | null>(null);
+const shouldRenderStars = ref(false);
 
 const navOnDark = useState<boolean>("navbar-on-dark", () => false);
 
 let ctx: gsap.Context | null = null;
-let cleanupCanvas: (() => void) | null = null;
 
 const prefersReducedMotion = () =>
   import.meta.client &&
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-const initParticleSystem = (): (() => void) | null => {
-  const canvas = starCanvas.value;
-  if (!canvas) return null;
-
-  const ctx2d = canvas.getContext("2d");
-  if (!ctx2d) return null;
-
-  const section = sectionRef.value;
-  if (!section) return null;
-
-  let width = section.offsetWidth;
-  let height = section.offsetHeight;
-  canvas.width = width;
-  canvas.height = height;
-
-  let particles: Star[] = [];
-  let meteors: Meteor[] = [];
-  let animationFrameId: number | null = null;
-  let nextMeteorTime: number = Date.now() + Math.random() * 3000;
-
-  const pivotX = () => width;
-  const pivotY = () => height;
-
-  const initStars = () => {
-    particles = [];
-    meteors = [];
-    const maxDistance = Math.sqrt(width * width + height * height) * 1.1;
-    const circleArea = Math.PI * maxDistance * maxDistance;
-    const particleCount = Math.floor(circleArea / 22000);
-
-    for (let i = 0; i < particleCount; i++) {
-      particles.push({
-        distance: Math.sqrt(Math.random()) * maxDistance,
-        angle: Math.random() * Math.PI * 2,
-        speed: Math.random() * 0.0001 + 0.0001,
-        size: Math.random() * 1.2 + 0.3,
-        phase: Math.random() * Math.PI * 2,
-        twinkleSpeed: Math.random() * 0.02 + 0.005,
-        baseAlpha: Math.random() * 0.4 + 0.5,
-        variance: Math.random() * 0.2 + 0.2,
-      });
-    }
-  };
-
-  const spawnMeteor = () => {
-    const baseSpeed = Math.random() * 3 + 4;
-    meteors.push({
-      x: Math.random() * width * 1.5,
-      y: -50,
-      vx: -baseSpeed * 1.0,
-      vy: baseSpeed * 1.5,
-      length: Math.random() * 400 + 350,
-      thickness: Math.random() * 1.2 + 1.2,
-      life: 0,
-      maxLife: 140 + Math.random() * 60,
-    });
-  };
-
-  const draw = () => {
-    if (!ctx2d) return;
-    ctx2d.clearRect(0, 0, width, height);
-
-    for (let i = 0; i < particles.length; i++) {
-      const p = particles[i];
-      if (!p) continue;
-
-      p.phase += p.twinkleSpeed;
-      p.angle += p.speed;
-      const currentAlpha = Math.max(
-        0.15,
-        Math.min(1, p.baseAlpha + Math.sin(p.phase) * p.variance),
-      );
-      const x = pivotX() + Math.cos(p.angle) * p.distance;
-      const y = pivotY() + Math.sin(p.angle) * p.distance;
-
-      if (x > -10 && x < width + 10 && y > -10 && y < height + 10) {
-        ctx2d.beginPath();
-        ctx2d.arc(Math.round(x), Math.round(y), p.size, 0, Math.PI * 2);
-        ctx2d.fillStyle = `rgba(255, 255, 255, ${currentAlpha})`;
-        ctx2d.fill();
-      }
-    }
-
-    const now = Date.now();
-    if (now > nextMeteorTime) {
-      const count = Math.random() < 0.15 ? 2 : 1;
-      for (let k = 0; k < count; k++) spawnMeteor();
-      nextMeteorTime = now + (Math.random() * 5000 + 1000);
-    }
-
-    for (let i = meteors.length - 1; i >= 0; i--) {
-      const m = meteors[i];
-      if (!m) continue;
-
-      m.x += m.vx;
-      m.y += m.vy;
-      m.life++;
-
-      const opacity = Math.max(0, 1 - m.life / m.maxLife);
-
-      if (
-        m.life >= m.maxLife ||
-        opacity <= 0 ||
-        m.x < -400 ||
-        m.y > height + 400
-      ) {
-        meteors.splice(i, 1);
-        continue;
-      }
-
-      const speedScale = Math.sqrt(m.vx * m.vx + m.vy * m.vy);
-      const tailX = m.x - (m.vx / speedScale) * m.length;
-      const tailY = m.y - (m.vy / speedScale) * m.length;
-
-      const gradient = ctx2d.createLinearGradient(m.x, m.y, tailX, tailY);
-      gradient.addColorStop(0, `rgba(255, 255, 255, ${opacity * 0.7})`);
-      gradient.addColorStop(1, `rgba(255, 255, 255, 0)`);
-
-      ctx2d.beginPath();
-      ctx2d.moveTo(m.x, m.y);
-      ctx2d.lineTo(tailX, tailY);
-      ctx2d.strokeStyle = gradient;
-      ctx2d.lineWidth = m.thickness;
-      ctx2d.lineCap = "round";
-      ctx2d.stroke();
-
-      ctx2d.beginPath();
-      ctx2d.arc(m.x, m.y, m.thickness * 1.5, 0, Math.PI * 2);
-      ctx2d.fillStyle = `rgba(255, 255, 255, ${opacity})`;
-      ctx2d.fill();
-    }
-    animationFrameId = requestAnimationFrame(draw);
-  };
-
-  initStars();
-  draw();
-
-  const onResize = () => {
-    if (!section) return;
-    width = section.offsetWidth;
-    height = section.offsetHeight;
-    canvas.width = width;
-    canvas.height = height;
-    initStars();
-  };
-
-  window.addEventListener("resize", onResize);
-  return () => {
-    window.removeEventListener("resize", onResize);
-    if (animationFrameId) cancelAnimationFrame(animationFrameId);
-  };
-};
-
 onMounted(async () => {
   if (!sectionRef.value) return;
 
-  if (!prefersReducedMotion()) {
-    cleanupCanvas = initParticleSystem();
-  }
+  const reducedMotion = prefersReducedMotion();
+  shouldRenderStars.value = !reducedMotion;
 
-  if (prefersReducedMotion()) return;
+  await nextTick();
+
+  if (reducedMotion) return;
 
   const { ScrollTrigger } = await import("gsap/ScrollTrigger");
   gsap.registerPlugin(ScrollTrigger);
@@ -363,7 +192,7 @@ onMounted(async () => {
       titleEl.dataset.split = "1";
     }
 
-    gsap.set(starCanvas.value, { opacity: 0 });
+    gsap.set(starLayerRef.value, { opacity: 0 });
 
     const soulTl = gsap.timeline({
       scrollTrigger: {
@@ -405,7 +234,7 @@ onMounted(async () => {
 
     soulTl
       .to(
-        starCanvas.value,
+        starLayerRef.value,
         {
           opacity: 1,
           duration: 1.2,
@@ -510,11 +339,6 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   ctx?.revert();
   navOnDark.value = false;
-
-  if (cleanupCanvas) {
-    cleanupCanvas();
-    cleanupCanvas = null;
-  }
 });
 </script>
 

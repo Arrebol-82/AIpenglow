@@ -6,7 +6,7 @@
     <div
       class="future-watermark absolute -bottom-[3.125rem] -left-6 z-0 select-none pointer-events-none leading-none text-[calc(min(30vw,30vh)+6.875rem)] md:left-0"
     >
-      {{ NOW_WATERMARK }}
+      {{ nowContent.watermark }}
     </div>
 
     <div
@@ -52,15 +52,15 @@
               class="vertical-text whitespace-nowrap font-mono text-[12px] uppercase tracking-[0.2em] text-[#1D1E18]/50"
             >
               <span class="translate-y-[5.625rem]">{{
-                NOW_SCALE_VERTICAL_LINE_1
+                nowContent.scaleVerticalLine1
               }}</span>
-              <span>{{ NOW_SCALE_VERTICAL_LINE_2 }}</span>
+              <span>{{ nowContent.scaleVerticalLine2 }}</span>
             </div>
             <span
               aria-hidden="true"
               class="absolute bottom-0 left-0 text-[1rem] leading-none text-[#1D1E18]/50 [transform:translateX(-0.875rem)_translateY(6.625rem)_scaleY(-1)]"
             >
-              {{ NOW_SCALE_QUOTE }}
+              {{ nowContent.scaleQuote }}
             </span>
           </div>
 
@@ -134,12 +134,12 @@
           >
             <span
               class="border-r-[2.5px] border-[#1D1E18] px-[0.5625rem] py-[0.6875rem] font-mono text-[1.125rem] font-bold leading-none group-hover:border-[#F6F1E7]"
-              >{{ NOW_BUTTON_ICON }}</span
+              >{{ nowContent.buttonIcon }}</span
             >
             <span
               class="px-[0.875rem] py-[0.6875rem] font-mono text-xs font-bold uppercase tracking-widest md:text-sm"
             >
-              {{ NOW_BUTTON_TEXT }}
+              {{ nowContent.buttonText }}
             </span>
           </button>
         </div>
@@ -165,17 +165,155 @@ import {
 } from "./nowData";
 import { SCALE_TICKS_PER_LOG, SCALE_EXTRA_LOG_SLOTS } from "./nowConstants";
 
-const futureEntries: FutureEntry[] = NOW_FUTURE_ENTRIES;
-const futureLineWidths = NOW_FUTURE_LINE_WIDTHS;
-const logs: LogEntry[] = NOW_LOG_ENTRIES;
+type NowContent = {
+  watermark: string;
+  scaleVerticalLine1: string;
+  scaleVerticalLine2: string;
+  scaleQuote: string;
+  buttonIcon: string;
+  buttonText: string;
+  futureLineWidths: number[];
+  futureEntries: FutureEntry[];
+  logEntries: LogEntry[];
+};
+
+const defaultNowContent: NowContent = {
+  watermark: NOW_WATERMARK,
+  scaleVerticalLine1: NOW_SCALE_VERTICAL_LINE_1,
+  scaleVerticalLine2: NOW_SCALE_VERTICAL_LINE_2,
+  scaleQuote: NOW_SCALE_QUOTE,
+  buttonIcon: NOW_BUTTON_ICON,
+  buttonText: NOW_BUTTON_TEXT,
+  futureLineWidths: NOW_FUTURE_LINE_WIDTHS,
+  futureEntries: NOW_FUTURE_ENTRIES,
+  logEntries: NOW_LOG_ENTRIES,
+};
+
+const nowContent = ref<NowContent>({ ...defaultNowContent });
+const futureEntries = ref<FutureEntry[]>([...defaultNowContent.futureEntries]);
+const futureLineWidths = ref<number[]>([...defaultNowContent.futureLineWidths]);
+const logs = ref<LogEntry[]>([...defaultNowContent.logEntries]);
 const scaleTicksPerLog = SCALE_TICKS_PER_LOG;
 const scaleExtraLogSlots = SCALE_EXTRA_LOG_SLOTS;
-const scaleTickCount = (logs.length + scaleExtraLogSlots) * scaleTicksPerLog;
+const scaleTicks = ref(
+  Array.from(
+    { length: (logs.value.length + scaleExtraLogSlots) * scaleTicksPerLog },
+    (_, index) => ({
+      index,
+      kind: index % 8 === 0 ? "major" : index % 4 === 0 ? "middle" : "minor",
+    }),
+  ),
+);
 
-const scaleTicks = Array.from({ length: scaleTickCount }, (_, index) => ({
-  index,
-  kind: index % 8 === 0 ? "major" : index % 4 === 0 ? "middle" : "minor",
-}));
+const isObject = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+};
+
+const toStringValue = (value: unknown, fallback: string) => {
+  return typeof value === "string" && value.trim() ? value : fallback;
+};
+
+const normalizeFutureEntries = (
+  value: unknown,
+  fallback: FutureEntry[],
+): FutureEntry[] => {
+  if (!Array.isArray(value)) return fallback;
+
+  const entries = value
+    .filter(isObject)
+    .map((item) => ({
+      title: typeof item.title === "string" ? item.title : "",
+      content: typeof item.content === "string" ? item.content : "",
+    }))
+    .filter((item) => item.title.trim() || item.content.trim());
+
+  return entries.length > 0 ? entries : fallback;
+};
+
+const normalizeLogEntries = (
+  value: unknown,
+  fallback: LogEntry[],
+): LogEntry[] => {
+  if (!Array.isArray(value)) return fallback;
+
+  const entries = value
+    .filter(isObject)
+    .map((item) => ({
+      date: typeof item.date === "string" ? item.date : "",
+      content: typeof item.content === "string" ? item.content : "",
+    }))
+    .filter((item) => item.date.trim() || item.content.trim());
+
+  return entries.length > 0 ? entries : fallback;
+};
+
+const normalizeLineWidths = (value: unknown, fallback: number[]) => {
+  if (!Array.isArray(value)) return fallback;
+
+  const widths = value
+    .map((item) => Number(item))
+    .filter((item) => Number.isFinite(item));
+
+  return widths.length > 0 ? widths : fallback;
+};
+
+const normalizeNowContent = (value: unknown): NowContent => {
+  if (!isObject(value)) return defaultNowContent;
+
+  return {
+    watermark: toStringValue(value.watermark, defaultNowContent.watermark),
+    scaleVerticalLine1: toStringValue(
+      value.scaleVerticalLine1,
+      defaultNowContent.scaleVerticalLine1,
+    ),
+    scaleVerticalLine2: toStringValue(
+      value.scaleVerticalLine2,
+      defaultNowContent.scaleVerticalLine2,
+    ),
+    scaleQuote: toStringValue(value.scaleQuote, defaultNowContent.scaleQuote),
+    buttonIcon: toStringValue(value.buttonIcon, defaultNowContent.buttonIcon),
+    buttonText: toStringValue(value.buttonText, defaultNowContent.buttonText),
+    futureLineWidths: normalizeLineWidths(
+      value.futureLineWidths,
+      defaultNowContent.futureLineWidths,
+    ),
+    futureEntries: normalizeFutureEntries(
+      value.futureEntries ?? value.goals,
+      defaultNowContent.futureEntries,
+    ),
+    logEntries: normalizeLogEntries(
+      value.logEntries ?? value.dailyLogs,
+      defaultNowContent.logEntries,
+    ),
+  };
+};
+
+const rebuildScaleTicks = () => {
+  scaleTicks.value = Array.from(
+    { length: (logs.value.length + scaleExtraLogSlots) * scaleTicksPerLog },
+    (_, index) => ({
+      index,
+      kind: index % 8 === 0 ? "major" : index % 4 === 0 ? "middle" : "minor",
+    }),
+  );
+};
+
+const applyNowContent = (content: NowContent) => {
+  nowContent.value = content;
+  futureEntries.value = content.futureEntries;
+  futureLineWidths.value = content.futureLineWidths;
+  logs.value = content.logEntries;
+  rebuildScaleTicks();
+};
+
+const loadNowContent = async () => {
+  try {
+    const response = await $fetch<{ content?: unknown }>("/api/site/now");
+    applyNowContent(normalizeNowContent(response.content));
+  } catch {
+    applyNowContent(defaultNowContent);
+  }
+};
 
 const scaleViewportRef = ref<HTMLElement | null>(null);
 const scaleTrackRef = ref<HTMLElement | null>(null);
@@ -465,6 +603,7 @@ const handleScalePointerDown = (event: PointerEvent) => {
 };
 
 onMounted(async () => {
+  await loadNowContent();
   await nextTick();
   if (logSheetRef.value) {
     logSheetQuickY = gsap.quickTo(logSheetRef.value, "y", {
