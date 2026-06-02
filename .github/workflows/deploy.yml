@@ -3,33 +3,39 @@ name: Deploy Nuxt App
 on:
   push:
     branches:
-      - main # 只有推送到 main 分支时才触发
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Deploy to Server
         uses: appleboy/ssh-action@v1.0.3
-    with:
-      host: ${{ secrets.REMOTE_HOST }}
-      username: ${{ secrets.REMOTE_USER }}
-      key: ${{ secrets.SSH_PRIVATE_KEY }}
-      command_timeout: 30m
-      script: |
-        export NVM_DIR="$HOME/.nvm"
-        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-        export PATH=$PATH:$(npm config get prefix)/bin
-        cd ~/code/AIpenglow
-        git fetch --all
-        git reset --hard origin/main
-        rm -rf .output .nuxt
-        npm install
-        NODE_OPTIONS="--max-old-space-size=1536" npm run build
-        pm2 restart AIpenglow-nuxt-app || pm2 start .output/server/index.mjs --name "AIpenglow-nuxt-app"
-        pm2 save
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 45m
+          script: |
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            export PATH=$PATH:$(npm config get prefix)/bin
+
+            cd ~/code/AIpenglow
+
+            git fetch --all
+            git reset --hard origin/main
+
+            rm -rf .output .nuxt
+
+            npm install
+
+            NODE_OPTIONS="--max-old-space-size=1536" npm run build
+
+            pm2 restart AIpenglow-nuxt-app || pm2 start .output/server/index.mjs --name "AIpenglow-nuxt-app"
+            pm2 save
