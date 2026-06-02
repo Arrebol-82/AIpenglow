@@ -8,34 +8,58 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy to Server
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Nuxt
+        run: npm run build
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+          NUXT_PUBLIC_SUPABASE_URL: ${{ secrets.NUXT_PUBLIC_SUPABASE_URL }}
+          NUXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NUXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+
+      - name: Pack output
+        run: tar -czf output.tar.gz .output
+
+      - name: Upload output to server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "output.tar.gz"
+          target: "/root/code/Alpenglow"
+
+      - name: Restart Nuxt on server
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.REMOTE_HOST }}
           username: ${{ secrets.REMOTE_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          command_timeout: 45m
+          command_timeout: 10m
           script: |
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             export PATH=$PATH:$(npm config get prefix)/bin
 
-            cd ~/code/AIpenglow
+            cd /root/code/Alpenglow
 
-            git fetch --all
-            git reset --hard origin/main
+            rm -rf .output
+            tar -xzf output.tar.gz
+            rm -f output.tar.gz
 
-            rm -rf .output .nuxt
-
-            npm install
-
-            NODE_OPTIONS="--max-old-space-size=1536" npm run build
-
-            pm2 restart AIpenglow-nuxt-app || pm2 start .output/server/index.mjs --name "AIpenglow-nuxt-app"
+            pm2 restart Alpenglow-nuxt-app --update-env || PORT=3000 HOST=0.0.0.0 pm2 start .output/server/index.mjs --name "Alpenglow-nuxt-app"
             pm2 save
