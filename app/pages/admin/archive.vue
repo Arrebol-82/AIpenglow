@@ -1,26 +1,23 @@
 <script setup lang="ts">
+import {
+  projects as fallbackProjects,
+  type ArchiveProject,
+} from "~/components/site/archive/archiveData";
+
 definePageMeta({
   layout: "admin",
 });
-
-type ArchiveProject = {
-  title: string;
-  role: string;
-  year: string;
-  image: string;
-  note: string;
-};
 
 type ArchiveContent = {
   projects: ArchiveProject[];
 };
 
 type ArchiveApiResponse = {
-  id: string;
+  id: string | null;
   pageKey: string;
   content: ArchiveContent;
   isPublished: boolean;
-  updatedAt: string;
+  updatedAt: string | null;
 };
 
 type UploadResponse = {
@@ -28,75 +25,21 @@ type UploadResponse = {
   path: string;
 };
 
-const defaultProjects: ArchiveProject[] = [
-  {
-    title: "Notion 练习页",
-    role: "页面设计",
-    year: "2022",
-    image:
-      "https://tciiblndsullnuezeshr.supabase.co/storage/v1/object/public/aIpenglow/archive1.webp",
-    note: "首版草图",
-  },
-  {
-    title: "个人品牌提案",
-    role: "品牌设计",
-    year: "2021",
-    image:
-      "https://tciiblndsullnuezeshr.supabase.co/storage/v1/object/public/aIpenglow/archive2.webp",
-    note: "物料研究",
-  },
-  {
-    title: "作品集交互练习",
-    role: "界面体验",
-    year: "2020",
-    image:
-      "https://tciiblndsullnuezeshr.supabase.co/storage/v1/object/public/aIpenglow/archive3.webp",
-    note: "交互推演",
-  },
-  {
-    title: "展览导视实验",
-    role: "空间装置",
-    year: "2019",
-    image:
-      "https://tciiblndsullnuezeshr.supabase.co/storage/v1/object/public/aIpenglow/archive4.webp",
-    note: "空间样张",
-  },
-  {
-    title: "片头节奏练习",
-    role: "动效设计",
-    year: "2018",
-    image:
-      "https://tciiblndsullnuezeshr.supabase.co/storage/v1/object/public/aIpenglow/archive5.png",
-    note: "镜头归档",
-  },
-  {
-    title: "排版海报练习",
-    role: "编辑设计",
-    year: "2017",
-    image:
-      "https://tciiblndsullnuezeshr.supabase.co/storage/v1/object/public/aIpenglow/archive6.png",
-    note: "印刷测试",
-  },
-];
-
 const isLoading = ref(true);
 const isSaving = ref(false);
-const savedMessage = ref("");
+const isUploading = ref(false);
 const errorMessage = ref("");
-const uploadErrorMessage = ref("");
-const updatedAt = ref("");
+const savedMessage = ref("");
+const uploadMessage = ref("");
+const updatedAt = ref<string | null>(null);
 
-const uploadState = ref<"idle" | "uploading" | "done" | "error">("idle");
 const uploadingProjectIndex = ref<number | null>(null);
+const isAddModalOpen = ref(false);
 const isDraftUploading = ref(false);
 
 const projects = ref<ArchiveProject[]>(
-  defaultProjects.map((item) => ({ ...item })),
+  fallbackProjects.map((item) => ({ ...item })),
 );
-
-const projectCount = computed(() => projects.value.length);
-
-const isAddModalOpen = ref(false);
 
 const draftProject = reactive<ArchiveProject>({
   title: "",
@@ -105,6 +48,8 @@ const draftProject = reactive<ArchiveProject>({
   image: "",
   note: "",
 });
+
+const projectCount = computed(() => projects.value.length);
 
 const getFetchErrorMessage = (error: unknown) => {
   if (typeof error === "object" && error !== null && "data" in error) {
@@ -126,16 +71,19 @@ const getFetchErrorMessage = (error: unknown) => {
   return "请求失败，请检查 Supabase 配置或接口。";
 };
 
-const applyProjects = (value: ArchiveProject[] | undefined) => {
-  const source = value?.length ? value : defaultProjects;
+const normalizeProject = (project: Partial<ArchiveProject>): ArchiveProject => {
+  return {
+    title: project.title || "未命名作品",
+    role: project.role || "作品类型",
+    year: project.year || String(new Date().getFullYear()),
+    image: project.image || "",
+    note: project.note || "作品备注",
+  };
+};
 
-  projects.value = source.map((item) => ({
-    title: item.title || "未命名作品",
-    role: item.role || "作品类型",
-    year: item.year || String(new Date().getFullYear()),
-    image: item.image || "",
-    note: item.note || "作品备注",
-  }));
+const applyProjects = (value: ArchiveProject[] | undefined) => {
+  const source = value?.length ? value : fallbackProjects;
+  projects.value = source.map((item) => normalizeProject(item));
 };
 
 const buildContentPayload = (): ArchiveContent => {
@@ -150,7 +98,7 @@ const buildContentPayload = (): ArchiveContent => {
   };
 };
 
-const fetchArchiveContent = async () => {
+const fetchArchive = async () => {
   isLoading.value = true;
   errorMessage.value = "";
 
@@ -161,52 +109,10 @@ const fetchArchiveContent = async () => {
     updatedAt.value = response.updatedAt;
   } catch (error) {
     errorMessage.value = getFetchErrorMessage(error);
-    applyProjects(defaultProjects);
+    applyProjects(fallbackProjects);
   } finally {
     isLoading.value = false;
   }
-};
-
-const resetDraftProject = () => {
-  draftProject.title = "";
-  draftProject.role = "";
-  draftProject.year = String(new Date().getFullYear());
-  draftProject.image = "";
-  draftProject.note = "";
-};
-
-const openAddModal = () => {
-  resetDraftProject();
-  uploadErrorMessage.value = "";
-  isAddModalOpen.value = true;
-};
-
-const closeAddModal = () => {
-  if (isDraftUploading.value) return;
-
-  isAddModalOpen.value = false;
-  resetDraftProject();
-};
-
-const confirmAddProject = () => {
-  projects.value.unshift({
-    title: draftProject.title.trim() || "未命名作品",
-    role: draftProject.role.trim() || "作品类型",
-    year: draftProject.year.trim() || String(new Date().getFullYear()),
-    image: draftProject.image.trim(),
-    note: draftProject.note.trim() || "作品备注",
-  });
-
-  closeAddModal();
-};
-
-const removeProject = (index: number) => {
-  if (projects.value.length <= 1) return;
-  projects.value.splice(index, 1);
-};
-
-const handleReset = () => {
-  applyProjects(defaultProjects);
 };
 
 const handleSave = async () => {
@@ -236,18 +142,46 @@ const handleSave = async () => {
   }
 };
 
-const handleImageError = (event: Event) => {
-  const target = event.target as HTMLImageElement;
-  target.src =
-    "https://tciiblndsullnuezeshr.supabase.co/storage/v1/object/public/aIpenglow/archive1.webp";
+const handleReset = () => {
+  applyProjects(fallbackProjects);
+};
+
+const resetDraftProject = () => {
+  draftProject.title = "";
+  draftProject.role = "";
+  draftProject.year = String(new Date().getFullYear());
+  draftProject.image = "";
+  draftProject.note = "";
+};
+
+const openAddModal = () => {
+  resetDraftProject();
+  uploadMessage.value = "";
+  isAddModalOpen.value = true;
+};
+
+const closeAddModal = () => {
+  if (isDraftUploading.value) return;
+  isAddModalOpen.value = false;
+  resetDraftProject();
+};
+
+const confirmAddProject = () => {
+  projects.value.unshift(normalizeProject(draftProject));
+  closeAddModal();
+};
+
+const removeProject = (index: number) => {
+  if (projects.value.length <= 1) return;
+  projects.value.splice(index, 1);
 };
 
 const uploadImageFile = async (file: File) => {
-  uploadErrorMessage.value = "";
+  errorMessage.value = "";
+  uploadMessage.value = "";
 
   if (!file.type.startsWith("image/")) {
-    uploadState.value = "error";
-    uploadErrorMessage.value = "只能上传图片文件";
+    errorMessage.value = "只能上传图片文件。";
     return null;
   }
 
@@ -255,36 +189,36 @@ const uploadImageFile = async (file: File) => {
   formData.append("file", file);
 
   try {
-    uploadState.value = "uploading";
+    isUploading.value = true;
 
     const response = await $fetch<UploadResponse>("/api/admin/upload/image", {
       method: "POST",
       body: formData,
     });
 
-    uploadState.value = "done";
+    uploadMessage.value = "图片上传成功";
 
     setTimeout(() => {
-      if (uploadState.value === "done") {
-        uploadState.value = "idle";
-      }
-    }, 1200);
+      uploadMessage.value = "";
+    }, 1600);
 
     return response.url;
   } catch (error) {
-    uploadState.value = "error";
-    uploadErrorMessage.value = getFetchErrorMessage(error);
+    errorMessage.value = getFetchErrorMessage(error);
     return null;
+  } finally {
+    isUploading.value = false;
   }
 };
 
-const handleProjectImageFile = async (file: File, index: number) => {
+const handleProjectFile = async (file: File, index: number) => {
   uploadingProjectIndex.value = index;
 
-  const publicUrl = await uploadImageFile(file);
+  const url = await uploadImageFile(file);
 
-  if (publicUrl) {
-    projects.value[index].image = publicUrl;
+  if (url) {
+    projects.value[index].image = url;
+    await handleSave();
   }
 
   uploadingProjectIndex.value = null;
@@ -296,8 +230,7 @@ const handleProjectImageChange = async (event: Event, index: number) => {
 
   if (!file) return;
 
-  await handleProjectImageFile(file, index);
-
+  await handleProjectFile(file, index);
   input.value = "";
 };
 
@@ -308,16 +241,16 @@ const handleProjectImageDrop = async (event: DragEvent, index: number) => {
 
   if (!file) return;
 
-  await handleProjectImageFile(file, index);
+  await handleProjectFile(file, index);
 };
 
-const handleDraftImageFile = async (file: File) => {
+const handleDraftFile = async (file: File) => {
   isDraftUploading.value = true;
 
-  const publicUrl = await uploadImageFile(file);
+  const url = await uploadImageFile(file);
 
-  if (publicUrl) {
-    draftProject.image = publicUrl;
+  if (url) {
+    draftProject.image = url;
   }
 
   isDraftUploading.value = false;
@@ -329,8 +262,7 @@ const handleDraftImageChange = async (event: Event) => {
 
   if (!file) return;
 
-  await handleDraftImageFile(file);
-
+  await handleDraftFile(file);
   input.value = "";
 };
 
@@ -341,11 +273,16 @@ const handleDraftImageDrop = async (event: DragEvent) => {
 
   if (!file) return;
 
-  await handleDraftImageFile(file);
+  await handleDraftFile(file);
+};
+
+const handleImageError = (event: Event) => {
+  const target = event.target as HTMLImageElement;
+  target.style.display = "none";
 };
 
 onMounted(() => {
-  void fetchArchiveContent();
+  void fetchArchive();
 });
 </script>
 
@@ -355,14 +292,18 @@ onMounted(() => {
       class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
     >
       <div>
+        <p class="text-xs font-medium tracking-[0.24em] text-white/35">
+          ARCHIVE / WORKS
+        </p>
+
         <h1
           class="mt-3 text-4xl font-semibold tracking-[-0.06em] text-[#f5f1e6]"
         >
-          作品集管理
+          Archive 管理
         </h1>
 
         <p class="mt-3 max-w-xl text-sm leading-7 text-white/45">
-          管理 Archive 页面中的作品标题、类型、年份、封面图和备注。
+          管理前台 Archive 页面里的作品标题、类型、年份、封面图和备注。
         </p>
 
         <p v-if="updatedAt" class="mt-2 text-xs text-white/30">
@@ -374,7 +315,7 @@ onMounted(() => {
         <button
           type="button"
           class="h-11 rounded-2xl border border-white/10 bg-white/[0.05] px-5 text-sm text-white/55 transition hover:bg-white/[0.1] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-          :disabled="isLoading || isSaving"
+          :disabled="isLoading || isSaving || isUploading"
           @click="handleReset"
         >
           重置
@@ -383,8 +324,8 @@ onMounted(() => {
         <button
           type="button"
           class="h-11 rounded-2xl border border-white/10 bg-white/[0.05] px-5 text-sm text-white/55 transition hover:bg-white/[0.1] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-          :disabled="isLoading || isSaving"
-          @click="fetchArchiveContent"
+          :disabled="isLoading || isSaving || isUploading"
+          @click="fetchArchive"
         >
           重新读取
         </button>
@@ -392,7 +333,7 @@ onMounted(() => {
         <button
           type="button"
           class="h-11 rounded-2xl bg-[#f5f1e6] px-5 text-sm font-medium text-[#050608] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-          :disabled="isLoading || isSaving"
+          :disabled="isLoading || isSaving || isUploading"
           @click="handleSave"
         >
           {{ isSaving ? "保存中..." : "保存修改" }}
@@ -415,10 +356,10 @@ onMounted(() => {
     </p>
 
     <p
-      v-if="uploadErrorMessage"
-      class="rounded-2xl border border-red-300/20 bg-red-300/10 px-4 py-3 text-sm text-red-100"
+      v-if="uploadMessage"
+      class="rounded-2xl border border-sky-300/20 bg-sky-300/10 px-4 py-3 text-sm text-sky-100"
     >
-      {{ uploadErrorMessage }}
+      {{ uploadMessage }}
     </p>
 
     <p
@@ -448,13 +389,13 @@ onMounted(() => {
           class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
         >
           <p class="text-sm leading-6 text-white/45">
-            图片会先上传到 Supabase Storage，再把公开 URL 保存到作品数据里。
+            图片可以手动输入 URL，也可以选择本地文件上传到 Supabase Storage。
           </p>
 
           <button
             type="button"
             class="h-11 shrink-0 rounded-2xl border border-white/10 bg-white/[0.05] px-5 text-sm text-white/60 transition hover:bg-white/[0.1] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-            :disabled="isLoading || isSaving"
+            :disabled="isLoading || isSaving || isUploading"
             @click="openAddModal"
           >
             添加作品
@@ -508,6 +449,7 @@ onMounted(() => {
 
             <img
               v-if="item.image"
+              :key="item.image"
               :src="item.image"
               :alt="item.title"
               class="absolute inset-0 h-full w-full object-cover"
@@ -590,12 +532,25 @@ onMounted(() => {
                 class="h-[48px] w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm text-[#f5f1e6] outline-none transition placeholder:text-white/25 focus:border-white/30 focus:bg-white/[0.08]"
               />
             </label>
+
+            <label class="block md:col-span-2">
+              <span class="mb-2 block text-sm text-white/45">图片 URL</span>
+
+              <input
+                v-model="item.image"
+                type="text"
+                placeholder="可以手动输入图片 URL，也可以上传图片后自动填入"
+                class="h-[48px] w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm text-[#f5f1e6] outline-none transition placeholder:text-white/25 focus:border-white/30 focus:bg-white/[0.08]"
+              />
+            </label>
           </div>
 
           <button
             type="button"
             class="flex aspect-square w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-white/35 transition hover:border-red-200/20 hover:bg-red-300/10 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-30 lg:self-start"
-            :disabled="projects.length <= 1 || isLoading || isSaving"
+            :disabled="
+              projects.length <= 1 || isLoading || isSaving || isUploading
+            "
             title="删除作品"
             @click="removeProject(index)"
           >
@@ -611,7 +566,7 @@ onMounted(() => {
         class="fixed inset-0 z-[999] flex items-center justify-center bg-black/70 px-5 backdrop-blur-xl"
       >
         <div
-          class="w-full max-w-[720px] rounded-[2rem] border border-white/10 bg-[#08090b] p-6 text-[#f5f1e6] shadow-[0_30px_120px_rgba(0,0,0,0.55)]"
+          class="w-full max-w-[760px] rounded-[2rem] border border-white/10 bg-[#08090b] p-6 text-[#f5f1e6] shadow-[0_30px_120px_rgba(0,0,0,0.55)]"
         >
           <div class="mb-6 flex items-start justify-between gap-4">
             <div>
@@ -622,7 +577,7 @@ onMounted(() => {
               </h2>
 
               <p class="mt-2 text-sm text-white/40">
-                填好作品信息并上传封面后，再点击确定添加到列表。
+                填好作品信息，可以上传封面，也可以手动输入图片 URL。
               </p>
             </div>
 
@@ -636,7 +591,7 @@ onMounted(() => {
             </button>
           </div>
 
-          <div class="grid gap-5 md:grid-cols-[180px_minmax(0,1fr)]">
+          <div class="grid gap-5 md:grid-cols-[190px_minmax(0,1fr)]">
             <label
               class="group relative flex aspect-square cursor-pointer items-center justify-center overflow-hidden rounded-[1.35rem] border border-dashed border-white/15 bg-white/[0.05] transition hover:border-white/30 hover:bg-white/[0.08]"
               @dragover.prevent
@@ -652,6 +607,7 @@ onMounted(() => {
 
               <img
                 v-if="draftProject.image"
+                :key="draftProject.image"
                 :src="draftProject.image"
                 :alt="draftProject.title || 'project image'"
                 class="absolute inset-0 h-full w-full object-cover"
@@ -727,6 +683,17 @@ onMounted(() => {
                   v-model="draftProject.note"
                   type="text"
                   placeholder="例如：首版草图"
+                  class="h-[48px] w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm text-[#f5f1e6] outline-none transition placeholder:text-white/25 focus:border-white/30 focus:bg-white/[0.08]"
+                />
+              </label>
+
+              <label class="block md:col-span-2">
+                <span class="mb-2 block text-sm text-white/45">图片 URL</span>
+
+                <input
+                  v-model="draftProject.image"
+                  type="text"
+                  placeholder="可以手动输入图片 URL，也可以上传图片后自动填入"
                   class="h-[48px] w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm text-[#f5f1e6] outline-none transition placeholder:text-white/25 focus:border-white/30 focus:bg-white/[0.08]"
                 />
               </label>

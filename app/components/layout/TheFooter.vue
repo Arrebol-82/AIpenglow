@@ -4,6 +4,27 @@ import { gsap } from "gsap";
 
 const currentTimeLabel = ref("--:-- GMT+8");
 
+const footerNavLinks = [
+  { id: "home", label: "首页", href: "#" },
+  { id: "about", label: "我", href: "#about" },
+  { id: "soul", label: "关于", href: "#soul" },
+  { id: "works-gallery", label: "作品", href: "#works-gallery" },
+] as const;
+
+const frontQuoteLines = [
+  "我听过一个关于小鱼的故事。",
+  "他游到大鱼跟前说：“ 我正努力寻找他们口中的大海。”",
+  "大鱼说：“大海？你现在就在海里。” ",
+  "“这里？”小鱼说，“这里是水，我要找的是大海。”",
+];
+
+const backQuoteLines = [
+  "你从哪里来的这些想法？",
+  "火花可不是灵魂的目标。",
+  "你们这些导师，还有你们所谓的激情、你们所谓的人生目标、你们所谓的人生意义……",
+  "太低级了。",
+];
+
 const footerTimeFormatter = new Intl.DateTimeFormat("en-GB", {
   hour: "2-digit",
   minute: "2-digit",
@@ -11,24 +32,26 @@ const footerTimeFormatter = new Intl.DateTimeFormat("en-GB", {
   timeZone: "Asia/Shanghai",
 });
 
-let footerTimeTimer: ReturnType<typeof setInterval> | null = null;
-
-const smoothScrollTo = useSmoothAnchor();
-
-const handleAnchorClick = (event: MouseEvent, href: string) => {
-  event.preventDefault();
-  smoothScrollTo(href);
-};
-
-const updateFooterTime = () => {
-  currentTimeLabel.value = `${footerTimeFormatter.format(new Date())} GMT+8`;
-};
+const { playAnchorTransition } = usePageTransition();
 
 const quoteRevealRef = ref<HTMLElement | null>(null);
 const frontQuoteRef = ref<HTMLElement | null>(null);
 const backQuoteRef = ref<HTMLElement | null>(null);
 
+let footerTimeTimer: ReturnType<typeof setInterval> | null = null;
 let quoteTl: gsap.core.Timeline | null = null;
+
+const handleAnchorClick = (
+  event: MouseEvent,
+  link: (typeof footerNavLinks)[number],
+) => {
+  event.preventDefault();
+  playAnchorTransition(link.href);
+};
+
+const updateFooterTime = () => {
+  currentTimeLabel.value = `${footerTimeFormatter.format(new Date())} GMT+8`;
+};
 
 const playQuoteReveal = () => {
   quoteTl?.play();
@@ -53,38 +76,19 @@ onMounted(() => {
   const frontLines = Array.from(
     frontQuoteRef.value.querySelectorAll<HTMLElement>(".quote-line"),
   );
-
   const backLines = Array.from(
     backQuoteRef.value.querySelectorAll<HTMLElement>(".quote-line"),
   );
 
-  gsap.set(frontQuoteRef.value, {
-    opacity: 1,
-  });
+  gsap.set([frontQuoteRef.value, backQuoteRef.value], { opacity: 1 });
+  gsap.set(frontLines, { opacity: 1, y: 0 });
+  gsap.set(backLines, { opacity: 0, y: 18 });
 
-  gsap.set(backQuoteRef.value, {
-    opacity: 1,
-  });
-
-  gsap.set(frontLines, {
-    opacity: 1,
-    y: 0,
-  });
-
-  gsap.set(backLines, {
-    opacity: 0,
-    y: 18,
-  });
-
-  if (reduceMotion) {
-    return;
-  }
+  if (reduceMotion) return;
 
   quoteTl = gsap.timeline({
     paused: true,
-    defaults: {
-      ease: "power3.out",
-    },
+    defaults: { ease: "power3.out" },
   });
 
   quoteTl
@@ -98,14 +102,7 @@ onMounted(() => {
       },
       0,
     )
-    .to(
-      frontQuoteRef.value,
-      {
-        opacity: 0.35,
-        duration: 0.45,
-      },
-      0.05,
-    )
+    .to(frontQuoteRef.value, { opacity: 0.35, duration: 0.45 }, 0.05)
     .to(
       backLines,
       {
@@ -157,24 +154,15 @@ onBeforeUnmount(() => {
         @focusout="reverseQuoteReveal"
       >
         <p ref="frontQuoteRef" class="footer-quote footer-quote--front">
-          <span class="quote-line">我听过一个关于小鱼的故事。</span>
-          <span class="quote-line">
-            他游到大鱼跟前说："我正努力寻找他们口中的大海。"
-          </span>
-          <span class="quote-line">大鱼说："大海？你现在就在海里。"</span>
-          <span class="quote-line">
-            "这里？"小鱼说，"这里是水，我要找的是大海。"
+          <span v-for="line in frontQuoteLines" :key="line" class="quote-line">
+            {{ line }}
           </span>
         </p>
 
         <p ref="backQuoteRef" class="footer-quote footer-quote--back">
-          <span class="quote-line">"你从哪里来的这些想法？</span>
-          <span class="quote-line">火花可不是灵魂的目标。</span>
-          <span class="quote-line"> 你们这些导师，还有你们所谓的激情、 </span>
-          <span class="quote-line">
-            你们所谓的人生目标、你们所谓的人生意义……
+          <span v-for="line in backQuoteLines" :key="line" class="quote-line">
+            {{ line }}
           </span>
-          <span class="quote-line">太低级了。"</span>
         </p>
       </div>
     </div>
@@ -183,40 +171,14 @@ onBeforeUnmount(() => {
       class="relative z-10 mt-24 flex w-full items-end justify-between md:mt-0"
     >
       <nav class="flex flex-col gap-3 pb-2">
-        <a href="#" class="nav-link" @click="handleAnchorClick($event, '#')">
-          首页
-        </a>
-
         <a
-          href="#works-gallery"
+          v-for="link in footerNavLinks"
+          :key="link.id"
+          :href="link.href"
           class="nav-link"
-          @click="handleAnchorClick($event, '#works-gallery')"
+          @click="handleAnchorClick($event, link)"
         >
-          我
-        </a>
-
-        <a
-          href="#about"
-          class="nav-link"
-          @click="handleAnchorClick($event, '#about')"
-        >
-          关于
-        </a>
-
-        <a
-          href="#contact"
-          class="nav-link"
-          @click="handleAnchorClick($event, '#contact')"
-        >
-          作品
-        </a>
-
-        <a
-          href="#archive"
-          class="nav-link"
-          @click="handleAnchorClick($event, '#archive')"
-        >
-          方向
+          {{ link.label }}
         </a>
       </nav>
 
@@ -262,17 +224,13 @@ onBeforeUnmount(() => {
   position: relative;
   width: fit-content;
   padding-bottom: 3px;
-
   font-family:
     "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", serif;
-
   font-size: clamp(0.9rem, 1.1vw, 1rem);
   font-weight: 500;
   letter-spacing: 0.18em;
-
   text-decoration: none;
   color: rgba(29, 30, 24, 0.72);
-
   transition:
     color 280ms ease,
     letter-spacing 280ms ease,
@@ -284,10 +242,8 @@ onBeforeUnmount(() => {
   position: absolute;
   left: 0;
   bottom: 0;
-
   width: 100%;
   height: 1px;
-
   background-color: rgba(29, 30, 24, 0.86);
   transform: scaleX(0);
   transform-origin: left center;
@@ -314,7 +270,6 @@ onBeforeUnmount(() => {
   }
 }
 
-/* Pure text quote reveal */
 .footer-quote-reveal {
   position: relative;
   display: grid;

@@ -47,7 +47,7 @@
           @pointerleave="handleListPointerLeave"
         >
           <li
-            v-for="(project, index) in projects"
+            v-for="(project, index) in archiveProjects"
             :key="project.title"
             :ref="(el) => setItemRef(el, index)"
             :data-archive-index="index"
@@ -128,7 +128,10 @@
 
 <script setup lang="ts">
 import { gsap } from "gsap";
-import { projects } from "./archiveData";
+import {
+  projects as fallbackProjects,
+  type ArchiveProject,
+} from "./archiveData";
 import {
   MARQUEE_TEXT,
   MARQUEE_COPIES,
@@ -144,6 +147,26 @@ import {
   PREVIEW_SWITCH_CARD,
   PREVIEW_LEAVE,
 } from "./archiveConstants";
+
+type ArchiveContent = {
+  projects: ArchiveProject[];
+};
+
+const archiveProjects = ref<ArchiveProject[]>(
+  fallbackProjects.map((item) => ({ ...item })),
+);
+
+const fetchArchiveProjects = async () => {
+  try {
+    const response = await $fetch<ArchiveContent>("/api/site/archive");
+
+    if (response.projects?.length) {
+      archiveProjects.value = response.projects.map((item) => ({ ...item }));
+    }
+  } catch {
+    archiveProjects.value = fallbackProjects.map((item) => ({ ...item }));
+  }
+};
 
 // ---------------------------------------------------------------------------
 // Derived constants
@@ -173,7 +196,9 @@ const activePreviewIndex = ref<number | null>(null);
 // ---------------------------------------------------------------------------
 
 const activePreviewProject = computed(() =>
-  activePreviewIndex.value === null ? null : projects[activePreviewIndex.value],
+  activePreviewIndex.value === null
+    ? null
+    : archiveProjects.value[activePreviewIndex.value],
 );
 
 // ---------------------------------------------------------------------------
@@ -376,6 +401,7 @@ const handleListPointerLeave = () => {
 // ---------------------------------------------------------------------------
 
 onMounted(async () => {
+  await fetchArchiveProjects();
   await nextTick();
 
   if (!sectionRef.value) return;
@@ -437,10 +463,6 @@ onMounted(async () => {
       gsap.set(meta, ENTRANCE_META.from);
     }
 
-    // Refresh required: ensures WorksArchiveStage's pin spacer recalculates
-    // after SectionArchive content renders into archiveWrapper, otherwise the
-    // pin height stays at pre-render value (0 or stale) and offsets all
-    // subsequent scroll positions.
     requestAnimationFrame(() => {
       ScrollTrigger.refresh();
     });

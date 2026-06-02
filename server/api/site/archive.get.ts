@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { createError, defineEventHandler, getMethod, readBody } from "h3";
+import { defineEventHandler } from "h3";
 
 const PAGE_KEY = "archive";
 
@@ -61,25 +61,13 @@ const normalizeContent = (content: unknown): ArchiveContent => {
 };
 
 export default defineEventHandler(async (event) => {
-  const method = getMethod(event);
-
-  if (!["GET", "POST"].includes(method)) {
-    throw createError({
-      statusCode: 405,
-      statusMessage: "Method Not Allowed",
-    });
-  }
-
   const config = useRuntimeConfig(event);
 
   const supabaseUrl = config.public.supabaseUrl;
   const supabaseSecretKey = config.supabaseSecretKey;
 
   if (!supabaseUrl || !supabaseSecretKey) {
-    throw createError({
-      statusCode: 500,
-      statusMessage: "Supabase environment variables are missing.",
-    });
+    return emptyContent;
   }
 
   const supabase = createClient(supabaseUrl, supabaseSecretKey, {
@@ -89,74 +77,20 @@ export default defineEventHandler(async (event) => {
     },
   });
 
-  if (method === "GET") {
+  try {
     const { data, error } = await supabase
       .from("archive_page")
-      .select("id, page_key, content, is_published, updated_at")
+      .select("content")
       .eq("page_key", PAGE_KEY)
+      .eq("is_published", true)
       .maybeSingle();
 
-    if (error) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: error.message,
-      });
+    if (error || !data) {
+      return emptyContent;
     }
 
-    if (!data) {
-      return {
-        id: null,
-        pageKey: PAGE_KEY,
-        content: emptyContent,
-        isPublished: true,
-        updatedAt: null,
-      };
-    }
-
-    return {
-      id: data.id,
-      pageKey: data.page_key,
-      content: normalizeContent(data.content),
-      isPublished: data.is_published,
-      updatedAt: data.updated_at,
-    };
+    return normalizeContent(data.content);
+  } catch {
+    return emptyContent;
   }
-
-  const body = await readBody<unknown>(event);
-  const bodyObject = isObject(body) ? body : {};
-  const rawContent = isObject(bodyObject.content)
-    ? bodyObject.content
-    : bodyObject;
-  const content = normalizeContent(rawContent);
-
-  const { data, error } = await supabase
-    .from("archive_page")
-    .upsert(
-      {
-        page_key: PAGE_KEY,
-        content,
-        is_published: true,
-        updated_at: new Date().toISOString(),
-      },
-      {
-        onConflict: "page_key",
-      },
-    )
-    .select("id, page_key, content, is_published, updated_at")
-    .single();
-
-  if (error) {
-    throw createError({
-      statusCode: 500,
-      statusMessage: error.message,
-    });
-  }
-
-  return {
-    id: data.id,
-    pageKey: data.page_key,
-    content: normalizeContent(data.content),
-    isPublished: data.is_published,
-    updatedAt: data.updated_at,
-  };
 });
