@@ -5,8 +5,6 @@ import {
   preloaderProgress,
   markPreloaderReady,
   markPreloaderDone,
-  hasPreloaderSeen,
-  markPreloaderSeen,
 } from "~/composables/useAppPreloader";
 import { useLenis } from "~/composables/useLenis";
 
@@ -25,12 +23,6 @@ const prefersReduced = import.meta.client
 
 onMounted(async () => {
   const lenis = useLenis();
-
-  // Same-tab repeat visit: skip loading entirely
-  if (hasPreloaderSeen()) {
-    skipLoading(lenis);
-    return;
-  }
 
   if (prefersReduced) {
     // Immediate: set progress to 100, skip animations
@@ -100,27 +92,6 @@ function decodeKeyImages(): Promise<void>[] {
   return promises;
 }
 
-function skipLoading(lenis: ReturnType<typeof useLenis>) {
-  // Fast-path: mark done immediately, overlay won't render (v-if="preloaderPhase !== 'done'")
-  markPreloaderReady();
-  markPreloaderDone();
-  emits("ready");
-
-  // Restore scrolling (just in case lenis was somehow stopped)
-  if (lenis) {
-    lenis.start();
-  }
-
-  // Refresh ScrollTrigger after next render tick
-  nextTick(() => {
-    import("gsap/ScrollTrigger").then((mod) => {
-      if (mod.ScrollTrigger) {
-        mod.ScrollTrigger.refresh();
-      }
-    });
-  });
-}
-
 function finishLoading(lenis: ReturnType<typeof useLenis>) {
   if (startedExiting.value) return;
   startedExiting.value = true;
@@ -143,8 +114,6 @@ function finishLoading(lenis: ReturnType<typeof useLenis>) {
 }
 
 function completeDone(lenis: ReturnType<typeof useLenis>) {
-  // Persist that this tab has seen the preloader
-  markPreloaderSeen();
   markPreloaderDone();
 
   // 5. Restore scrolling
@@ -209,10 +178,6 @@ onBeforeUnmount(() => {
   justify-content: center;
   background: #f6f1e7;
   pointer-events: all;
-}
-
-:global(html.preloader-seen) .app-preloader {
-  display: none !important;
 }
 
 .app-preloader__inner {

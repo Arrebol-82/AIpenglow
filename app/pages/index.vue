@@ -18,17 +18,6 @@ const revealStageRef = ref<HTMLElement | null>(null);
 const heroLayerRef = ref<HTMLElement | null>(null);
 const preloaderDone = ref(false);
 
-useHead({
-  script: [
-    {
-      key: "alpenglow-preloader-seen-guard",
-      tagPosition: "head",
-      innerHTML:
-        'try{if(sessionStorage.getItem("alpenglow-preloader-seen")==="1"){document.documentElement.classList.add("preloader-seen")}}catch(e){}',
-    },
-  ],
-});
-
 function onPreloaderReady() {
   preloaderDone.value = true;
   initRevealScroll();
@@ -181,11 +170,6 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-:global(html),
-:global(body) {
-  background: transparent;
-}
-
 .paper-transition {
   overflow: hidden;
   height: 5.75rem;

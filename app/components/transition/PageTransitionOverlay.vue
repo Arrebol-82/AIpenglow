@@ -33,6 +33,25 @@ const getLayers = () => {
   return [layer1Ref.value, layer2Ref.value, layer3Ref.value];
 };
 
+const resetLayers = () => {
+  const layers = getLayers();
+
+  if (layers.some((layer) => !layer)) return;
+
+  coverTween?.kill();
+  coverTween = null;
+
+  revealTween?.kill();
+  revealTween = null;
+
+  gsap.set(layers, {
+    y: "105%",
+    autoAlpha: 0,
+    display: "none",
+    pointerEvents: "none",
+  });
+};
+
 const animateCover = () => {
   coverTween?.kill();
   coverTween = null;
@@ -46,7 +65,9 @@ const animateCover = () => {
 
   gsap.set(layers, {
     y: "105%",
+    autoAlpha: 1,
     display: "block",
+    pointerEvents: "none",
   });
 
   coverTween = gsap.timeline({
@@ -106,7 +127,9 @@ const animateReveal = () => {
 
   gsap.set(layers, {
     y: "0%",
+    autoAlpha: 1,
     display: "block",
+    pointerEvents: "none",
   });
 
   revealTween = gsap.timeline({
@@ -114,7 +137,10 @@ const animateReveal = () => {
       revealTween = null;
 
       gsap.set(layers, {
+        y: "105%",
+        autoAlpha: 0,
         display: "none",
+        pointerEvents: "none",
       });
 
       transition.onRevealComplete();
@@ -158,6 +184,16 @@ const animateReveal = () => {
   );
 };
 
+onMounted(() => {
+  if (transition.phase.value === "idle") {
+    resetLayers();
+  }
+});
+
+onBeforeUnmount(() => {
+  resetLayers();
+});
+
 watch(
   () => transition.phase.value,
   (newPhase) => {
@@ -165,6 +201,8 @@ watch(
       animateCover();
     } else if (newPhase === "revealing") {
       animateReveal();
+    } else if (newPhase === "idle") {
+      resetLayers();
     }
   },
 );
@@ -203,7 +241,8 @@ watch(
   width: 100vw;
   height: 100vh;
   will-change: transform;
-  pointer-events: all;
+  pointer-events: none;
+  visibility: hidden;
 }
 
 .transition-layer-1 {
