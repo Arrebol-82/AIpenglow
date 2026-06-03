@@ -17,6 +17,9 @@ const progressBarRef = ref<HTMLElement | null>(null);
 const displayProgress = ref(0);
 const startedExiting = ref(false);
 
+const FONT_READY_TIMEOUT = 1200;
+const KEY_IMAGE_TIMEOUT = 1800;
+
 const prefersReduced = import.meta.client
   ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
   : false;
@@ -50,9 +53,10 @@ onMounted(async () => {
   // 3. Wait for real resources
   await Promise.all([
     nextTick(),
-    document.fonts.ready,
-    windowLoaded(),
-    ...decodeKeyImages(),
+    waitWithTimeout(document.fonts.ready, FONT_READY_TIMEOUT),
+    ...decodeKeyImages().map((promise) =>
+      waitWithTimeout(promise, KEY_IMAGE_TIMEOUT),
+    ),
   ]);
 
   // 4. Kill fake tween, snap to 100%
@@ -66,13 +70,6 @@ onMounted(async () => {
     },
   });
 });
-
-function windowLoaded(): Promise<void> {
-  if (document.readyState === "complete") return Promise.resolve();
-  return new Promise<void>((resolve) =>
-    window.addEventListener("load", () => resolve(), { once: true }),
-  );
-}
 
 function decodeKeyImages(): Promise<void>[] {
   const images = document.querySelectorAll<HTMLImageElement>(
@@ -90,6 +87,17 @@ function decodeKeyImages(): Promise<void>[] {
     }
   });
   return promises;
+}
+
+function waitWithTimeout<T>(promise: Promise<T>, timeout: number): Promise<T | void> {
+  return new Promise((resolve) => {
+    const timeoutId = window.setTimeout(() => resolve(), timeout);
+
+    promise
+      .then((value) => resolve(value))
+      .catch(() => resolve())
+      .finally(() => window.clearTimeout(timeoutId));
+  });
 }
 
 function finishLoading(lenis: ReturnType<typeof useLenis>) {

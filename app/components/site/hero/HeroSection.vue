@@ -609,6 +609,7 @@ const handleResize = () => {
         alt="painterly forest landscape at dusk with layered mist and soft cinematic light"
         class="hero-image"
         data-alt="Dreamy painterly forest scene with mist, rainfall, and soft atmospheric light in a Ghibli-inspired anime background style"
+        fetchpriority="high"
         loading="eager"
         src="/images/Hero_image.webp"
       />
