@@ -28,6 +28,10 @@ const isActive = (path: string) => {
 };
 
 const handleLogout = async () => {
+  await $fetch("/api/admin/auth/logout", {
+    method: "POST",
+  });
+
   await navigateTo("/admin/login");
 };
 </script>

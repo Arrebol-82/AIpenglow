@@ -23,16 +23,21 @@ const handleLogin = async () => {
   errorMessage.value = "";
   isLoading.value = true;
 
-  await new Promise((resolve) => setTimeout(resolve, 700));
+  try {
+    await $fetch("/api/admin/auth/login", {
+      method: "POST",
+      body: {
+        username: username.value,
+        password: password.value,
+      },
+    });
 
-  // Temporary local demo account.
-  if (username.value === "Arrebol82" && password.value === "zhu0802") {
     await navigateTo("/admin");
-  } else {
+  } catch {
     errorMessage.value = "账号或密码错误";
+  } finally {
+    isLoading.value = false;
   }
-
-  isLoading.value = false;
 };
 </script>
 

@@ -204,6 +204,10 @@ export default defineEventHandler(async (event) => {
     });
   }
 
+  if (method !== "GET") {
+    requireAdminAuth(event);
+  }
+
   const config = useRuntimeConfig(event);
 
   const supabaseUrl = config.public.supabaseUrl;

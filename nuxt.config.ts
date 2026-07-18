@@ -3,7 +3,7 @@ import { defineNuxtConfig } from "nuxt/config";
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
-  devtools: { enabled: true },
+  devtools: { enabled: process.env.NODE_ENV !== "production" },
   modules: ["@nuxtjs/tailwindcss", "@nuxt/icon", "@nuxt/image"],
   css: ["~/assets/css/main.css"],
   icon: {
@@ -32,6 +32,9 @@ export default defineNuxtConfig({
 
     // 只能在 server/api 使用，不能暴露到前端
     supabaseSecretKey: process.env.SUPABASE_SECRET_KEY || "",
+    adminUsername: process.env.ADMIN_USERNAME || "",
+    adminPassword: process.env.ADMIN_PASSWORD || "",
+    adminSessionSecret: process.env.ADMIN_SESSION_SECRET || "",
 
     public: {
       supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL || "",

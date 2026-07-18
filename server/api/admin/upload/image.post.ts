@@ -2,6 +2,13 @@ import { createClient } from "@supabase/supabase-js";
 import { createError, defineEventHandler, readMultipartFormData } from "h3";
 
 const BUCKET_NAME = "aIpenglow";
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/avif",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
 
 const getFileExtension = (filename: string, contentType = "") => {
   const fromName = filename.split(".").pop();
@@ -26,6 +33,8 @@ const sanitizeFilename = (filename: string) => {
 };
 
 export default defineEventHandler(async (event) => {
+  requireAdminAuth(event);
+
   const config = useRuntimeConfig(event);
 
   const supabaseUrl = config.public.supabaseUrl;
@@ -50,10 +59,17 @@ export default defineEventHandler(async (event) => {
 
   const contentType = filePart.type || "image/webp";
 
-  if (!contentType.startsWith("image/")) {
+  if (!ALLOWED_IMAGE_TYPES.has(contentType)) {
     throw createError({
       statusCode: 400,
-      statusMessage: "Only image files are allowed.",
+      statusMessage: "Only AVIF, JPG, PNG, and WebP images are allowed.",
+    });
+  }
+
+  if (filePart.data.length > MAX_IMAGE_SIZE) {
+    throw createError({
+      statusCode: 413,
+      statusMessage: "Image size must be 5MB or less.",
     });
   }
 
@@ -72,6 +88,7 @@ export default defineEventHandler(async (event) => {
     .from(BUCKET_NAME)
     .upload(filePath, filePart.data, {
       contentType,
+      cacheControl: "31536000",
       upsert: false,
     });
 

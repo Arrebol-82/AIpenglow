@@ -212,6 +212,19 @@ onBeforeUnmount(() => {
         </div>
       </div>
     </div>
+
+    <div
+      class="relative z-10 mt-2 flex w-full justify-center pb-2 md:pb-0 md:mt-[10px]"
+    >
+      <a
+        href="https://beian.miit.gov.cn/"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="text-xs text-stone-500 hover:underline"
+      >
+        粤ICP备2026039863号
+      </a>
+    </div>
   </footer>
 </template>
 
